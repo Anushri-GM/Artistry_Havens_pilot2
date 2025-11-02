@@ -412,13 +412,13 @@ export default function AddProductPage() {
                         </Button>
                     ) : (
                         <>
-                            <Button onClick={() => fileInputRef.current?.click()} variant="outline" className="h-12 flex-col">
+                            <Button onClick={() => fileInputRef.current?.click()} variant="outline" className="h-12 flex flex-col items-center justify-center">
                                 <div className="flex items-center">
                                     <Upload className="mr-2 h-4 w-4" />
                                     <span>{t.uploadButton}</span>
                                 </div>
                             </Button>
-                            <Button onClick={startCamera} variant="outline" className="h-12 flex-col">
+                            <Button onClick={startCamera} variant="outline" className="h-12 flex flex-col items-center justify-center">
                                 <div className="flex items-center">
                                     <Camera className="mr-2 h-4 w-4" />
                                     <span>{t.cameraButton}</span>
@@ -494,10 +494,10 @@ export default function AddProductPage() {
                                 htmlFor="social-media-consent"
                                 className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                                 >
-                                Feature on Social Media
+                                {t.socialMediaConsentLabel}
                                 </label>
                                 <p className="text-sm text-muted-foreground">
-                                I agree to allow the admin to feature this product's image on official social media channels.
+                                {t.socialMediaConsentDescription}
                                 </p>
                             </div>
                         </div>
