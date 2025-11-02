@@ -25,13 +25,9 @@ import TutorialDialog from '@/components/tutorial-dialog';
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { useUser, useFirebaseApp } from '@/firebase';
 
-
-// Mocking the current artisan as Elena Vance (ID '1')
-const CURRENT_ARTISAN_ID = '1';
-
 interface AiReviewResult {
     aiReview: string;
-    aiReviewAudio?: string; // Audio is now optional as it's not part of the backend response
+    aiReviewAudio?: string;
 }
 
 const formSchema = z.object({
@@ -118,15 +114,21 @@ export default function ArtisanHomePage() {
     try {
       const functions = getFunctions(firebaseApp);
       const generateAIResponse = httpsCallable(functions, "generateAIResponse");
+      
+      // The backend function now returns an object with `review` and `reviewAudio`.
       const response = await generateAIResponse({ prompt: values.productDescription });
       
-      const aiResponse = (response.data as any)?.response;
+      const responseData = response.data as any;
 
-      if (!aiResponse) {
+      if (!responseData || !responseData.review) {
         throw new Error("Invalid response from backend.");
       }
 
-      setResult({ aiReview: aiResponse });
+      // Set the entire result object, which includes the audio data URI
+      setResult({
+        aiReview: responseData.review,
+        aiReviewAudio: responseData.reviewAudio,
+      });
       
       toast({
         title: t.insightsGeneratedToast,

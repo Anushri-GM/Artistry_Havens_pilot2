@@ -15,8 +15,8 @@ const {setGlobalOptions} = require("firebase-functions/v2/options");
 const {logger} = require("firebase-functions");
 const admin = require("firebase-admin");
 
-// 🔹 Import AI module
-const {generateResponse} = require("./ai/genkit.js");
+// 🔹 Import AI module - ensure the path is correct
+const { generateResponse, generateReviewWithAudio } = require("./ai/genkit.js");
 
 // 🌍 Set global region for all functions
 setGlobalOptions({region: "asia-south2"});
@@ -140,24 +140,28 @@ exports.generateAIResponse = onCall(async (request) => {
   }
 
   try {
-    const aiResponseText = await generateResponse(prompt);
+    // Use the new function that returns both text and audio
+    const aiResult = await generateReviewWithAudio(prompt);
 
     await db.collection("aiRequests").add({
       userId,
       prompt,
-      response: aiResponseText,
+      response: aiResult.review, // Store the text review in Firestore
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
     logger.info(
-        `✅ AI response generated for user: ${userId}`,
+        `✅ AI response and audio generated for user: ${userId}`,
     );
 
-    return {response: aiResponseText};
+    // Return the full object with both text and audio to the client
+    return aiResult;
+
   } catch (error) {
     logger.error("❌ generateAIResponse failed:", error);
     throw new HttpsError("internal", "Failed to generate AI response.");
   }
-  const {createUserProfile} = require("./users/createProfile");
-  exports.createUserProfile = createUserProfile;
 });
+
+const {createUserProfile} = require("./users/createProfile");
+exports.createUserProfile = createUserProfile;
