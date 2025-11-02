@@ -411,7 +411,7 @@ export default function AddProductPage() {
                             {t.captureButton}
                         </Button>
                     ) : (
-                        <>
+                        <div className="flex flex-col space-y-2">
                             <Button onClick={() => fileInputRef.current?.click()} variant="outline" className="h-12 flex items-center justify-center">
                                 <Upload className="mr-2 h-4 w-4" />
                                 <span>{t.uploadButton}</span>
@@ -420,7 +420,7 @@ export default function AddProductPage() {
                                 <Camera className="mr-2 h-4 w-4" />
                                 <span>{t.cameraButton}</span>
                             </Button>
-                        </>
+                        </div>
                     )}
                 </CardContent>
 
