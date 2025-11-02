@@ -21,14 +21,7 @@ import { cn } from '@/lib/utils';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import Autoplay from 'embla-carousel-autoplay';
 import TutorialDialog from '@/components/tutorial-dialog';
-
-import { getFunctions, httpsCallable } from "firebase/functions";
-import { useUser, useFirebaseApp } from '@/firebase';
-
-interface AiReviewResult {
-    review: string;
-    reviewAudio?: string;
-}
+import { getCommunityTrendInsights } from '@/ai/flows/community-trend-insights';
 
 const formSchema = z.object({
   productDescription: z.string().min(10, 'Description must be at least 10 characters long.'),
@@ -36,13 +29,11 @@ const formSchema = z.object({
 
 export default function ArtisanHomePage() {
   const [isLoading, setIsLoading] = useState(false);
-  const [result, setResult] = useState<AiReviewResult | null>(null);
+  const [result, setResult] = useState<{ aiReview: string; aiReviewAudio: string; } | null>(null);
   const { toast } = useToast();
   const { translations } = useTranslation();
   const { language } = useLanguage();
   const t = translations.artisan_home;
-  const { user } = useUser();
-  const firebaseApp = useFirebaseApp();
   
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -99,36 +90,21 @@ export default function ArtisanHomePage() {
 
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!user) {
-        toast({
-            variant: 'destructive',
-            title: 'Authentication Error',
-            description: 'You must be logged in to get an AI review.',
-        });
-        return;
-    }
-    
     setIsLoading(true);
     setResult(null);
 
     try {
-      const functions = getFunctions(firebaseApp);
-      const generateAIResponse = httpsCallable(functions, "generateAIResponse");
-      
-      // The backend function now returns an object with `review` and `reviewAudio`.
-      const response = await generateAIResponse({ prompt: values.productDescription });
-      
-      const responseData = response.data as any;
+      const response = await getCommunityTrendInsights({
+        artisanId: 'temp-artisan-id', // In a real app, get this from user auth
+        productDescription: values.productDescription,
+        language: language,
+      });
 
-      if (!responseData || !responseData.review) {
-        throw new Error("Invalid response from backend.");
+      if (!response || !response.aiReview) {
+        throw new Error("Invalid response from AI flow.");
       }
 
-      // Set the entire result object, which includes the audio data URI
-      setResult({
-        aiReview: responseData.review,
-        aiReviewAudio: responseData.reviewAudio,
-      });
+      setResult(response);
       
       toast({
         title: t.insightsGeneratedToast,
@@ -329,5 +305,3 @@ export default function ArtisanHomePage() {
     </div>
   );
 }
-
-    

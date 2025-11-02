@@ -15,12 +15,6 @@ const {setGlobalOptions} = require("firebase-functions/v2/options");
 const {logger} = require("firebase-functions");
 const admin = require("firebase-admin");
 
-// 🔹 Import AI module - ensure the path is correct
-const { generateResponse, generateReviewWithAudio } = require("./ai/genkit.js");
-
-// 🌍 Set global region for all functions
-setGlobalOptions({region: "asia-south2"});
-
 // 🏗 Initialize Firebase Admin SDK
 admin.initializeApp({
   projectId: "artistry-havens-1-654483-678d5",
@@ -75,93 +69,6 @@ exports.onNewUserCreate = onDocumentCreated("users/{userId}", async (event) => {
   return null;
 });
 
-/**
- * 💬 Trigger: When a new message document is created.
- * Path: messages/{messageId}
- */
-exports.onNewMessageCreate = onDocumentCreated(
-    "messages/{messageId}",
-    async (event) => {
-      const snap = event.data;
-      if (!snap) {
-        logger.warn("No data in onMessageCreate event.");
-        return null;
-      }
-
-      const messageData = snap.data();
-      const messageId = event.params.messageId;
-
-      if (!messageData || !messageData.text) {
-        logger.info(`Message ${messageId} missing text; skipping.`);
-        return null;
-      }
-
-      try {
-        const aiResponseText = await generateResponse(messageData.text);
-
-        await db.collection("aiRequests").add({
-          userId: messageData.senderId || "unknown",
-          prompt: messageData.text,
-          response: aiResponseText,
-          createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
-
-        logger.info(
-            `🤖 AI response stored for message: ${messageId}`,
-        );
-      } catch (error) {
-        logger.error("❌ Genkit AI processing failed:", error);
-      }
-
-      return null;
-    },
-);
-
-/**
- * ⚙️ HTTPS Callable: Generate AI response from frontend.
- * Requires auth.
- */
-exports.generateAIResponse = onCall(async (request) => {
-  const context = request.auth;
-  const data = request.data;
-
-  if (!context || !context.uid) {
-    throw new HttpsError("unauthenticated", "User must be logged in.");
-  }
-
-  const {prompt} = data;
-  const userId = context.uid;
-
-  if (!prompt || typeof prompt !== "string" || prompt.trim() === "") {
-    throw new HttpsError(
-        "invalid-argument",
-        "'prompt' must be a non-empty string.",
-    );
-  }
-
-  try {
-    // Use the new function that returns both text and audio
-    const aiResult = await generateReviewWithAudio(prompt);
-
-    await db.collection("aiRequests").add({
-      userId,
-      prompt,
-      response: aiResult.review, // Store the text review in Firestore
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
-
-    logger.info(
-        `✅ AI response and audio generated for user: ${userId}`,
-    );
-
-    // Return the full object with both text and audio to the client
-    return aiResult;
-
-  } catch (error) {
-    logger.error("❌ generateAIResponse failed:", error);
-    throw new HttpsError("internal", "Failed to generate AI response.");
-  }
-});
 
 const {createUserProfile} = require("./users/createProfile");
 exports.createUserProfile = createUserProfile;
