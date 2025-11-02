@@ -42,7 +42,7 @@ const tutorials: Tutorial[] = [
   {
     id: 'dashboard',
     title: 'Understanding Your Revenue',
-    videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4',
+    videoUrl: 'https://ik.imagekit.io/u92ylzrua/Revenue_Finance.mp4?updatedAt=1762100675221',
     description: "A quick guide to your revenue dashboard, including how to track earnings and revenue shared with sponsors."
   },
   {
@@ -131,5 +131,6 @@ export default function TutorialDialog({ pageId, children }: TutorialDialogProps
 }
 
     
+
 
 
