@@ -5,12 +5,16 @@
  */
 
 const {onDocumentCreated} = require("firebase-functions/v2/firestore");
-const {onCall, onRequest, HttpsError} = require("firebase-functions/v2/https");
+const {
+  onCall,
+  onRequest,
+  HttpsError,
+} = require("firebase-functions/v2/https");
 const {setGlobalOptions} = require("firebase-functions/v2/options");
 const {logger} = require("firebase-functions");
 const admin = require("firebase-admin");
 
-// 🔹 Import AI module (updated to match new export)
+// 🔹 Import AI module
 const {generateResponse} = require("./ai/genkit.js");
 
 // 🌍 Set global region for all functions
@@ -31,7 +35,7 @@ logger.info("✅ Connected to Firestore database: (default)");
  */
 exports.testBackend = onRequest((req, res) => {
   logger.info("testBackend function called!");
-  res.status(200).send({
+  res.status(200).json({
     message: "Firebase backend is running successfully!",
     database: "(default)",
     region: "asia-south2",
@@ -46,7 +50,7 @@ exports.onUserCreate = onDocumentCreated("users/{userId}", async (event) => {
   const snap = event.data;
   if (!snap) {
     logger.error("No data in onUserCreate event.");
-    return;
+    return null;
   }
 
   const userData = snap.data();
@@ -66,6 +70,8 @@ exports.onUserCreate = onDocumentCreated("users/{userId}", async (event) => {
         {merge: true},
     );
   }
+
+  return null;
 });
 
 /**
@@ -78,7 +84,7 @@ exports.onMessageCreate = onDocumentCreated(
       const snap = event.data;
       if (!snap) {
         logger.warn("No data in onMessageCreate event.");
-        return;
+        return null;
       }
 
       const messageData = snap.data();
@@ -86,7 +92,7 @@ exports.onMessageCreate = onDocumentCreated(
 
       if (!messageData || !messageData.text) {
         logger.info(`Message ${messageId} missing text; skipping.`);
-        return;
+        return null;
       }
 
       try {
@@ -99,10 +105,14 @@ exports.onMessageCreate = onDocumentCreated(
           createdAt: admin.firestore.FieldValue.serverTimestamp(),
         });
 
-        logger.info(`🤖 AI response stored for message: ${messageId}`);
+        logger.info(
+            `🤖 AI response stored for message: ${messageId}`,
+        );
       } catch (error) {
         logger.error("❌ Genkit AI processing failed:", error);
       }
+
+      return null;
     },
 );
 
@@ -138,7 +148,10 @@ exports.generateAIResponse = onCall(async (request) => {
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    logger.info(`✅ AI response generated for user: ${userId}`);
+    logger.info(
+        `✅ AI response generated for user: ${userId}`,
+    );
+
     return {response: aiResponseText};
   } catch (error) {
     logger.error("❌ generateAIResponse failed:", error);
