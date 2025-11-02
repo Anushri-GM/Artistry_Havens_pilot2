@@ -84,6 +84,10 @@ function ProfilePageComponent() {
       };
       
       recognitionRef.current.onerror = (event: any) => {
+        if (event.error === 'no-speech' || event.error === 'aborted') {
+            setIsListening(false);
+            return;
+        }
         console.error('Speech recognition error:', event.error);
         toast({
           variant: 'destructive',
@@ -371,3 +375,5 @@ export default function ProfilePage() {
     </Suspense>
   )
 }
+
+    

@@ -26,8 +26,8 @@ import { getFunctions, httpsCallable } from "firebase/functions";
 import { useUser, useFirebaseApp } from '@/firebase';
 
 interface AiReviewResult {
-    aiReview: string;
-    aiReviewAudio?: string;
+    review: string;
+    reviewAudio?: string;
 }
 
 const formSchema = z.object({
@@ -69,7 +69,7 @@ export default function ArtisanHomePage() {
       recognitionRef.current.onstart = () => setIsListening(true);
       recognitionRef.current.onend = () => setIsListening(false);
       recognitionRef.current.onerror = (event: any) => {
-        if (event.error === 'no-speech') {
+        if (event.error === 'no-speech' || event.error === 'aborted') {
           setIsListening(false);
           return;
         }
@@ -329,3 +329,5 @@ export default function ArtisanHomePage() {
     </div>
   );
 }
+
+    
