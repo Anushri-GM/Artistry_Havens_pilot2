@@ -9,17 +9,6 @@ import Image from "next/image";
 import { useTranslation } from "@/context/translation-context";
 
 // Mock data for sponsored products and revenue
-const myRevenueData = [
-  {
-    ...products[0],
-    revenue: 450,
-  },
-  {
-    ...products[3],
-    revenue: 1200,
-  },
-];
-
 const sharedRevenueData = [
   {
     ...products[1],
@@ -45,45 +34,6 @@ export default function RevenuePage() {
       </header>
 
       <div className="grid gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>{t.myRevenueTitle}</CardTitle>
-            <CardDescription>
-              {t.myRevenueDescription}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-                <Table>
-                <TableHeader>
-                    <TableRow>
-                    <TableHead className="w-[80px] sm:w-[100px]">{t.productHeader}</TableHead>
-                    <TableHead>{t.nameHeader}</TableHead>
-                    <TableHead className="text-right">{t.revenueHeader}</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {myRevenueData.map((item) => (
-                    <TableRow key={item.id}>
-                        <TableCell>
-                        <Image
-                            src={item.image.url}
-                            alt={item.name}
-                            width={64}
-                            height={64}
-                            className="rounded-md object-cover aspect-square"
-                        />
-                        </TableCell>
-                        <TableCell className="font-medium">{item.name}</TableCell>
-                        <TableCell className="text-right font-semibold">₹{item.revenue.toFixed(2)}</TableCell>
-                    </TableRow>
-                    ))}
-                </TableBody>
-                </Table>
-            </div>
-          </CardContent>
-        </Card>
-
         <Card>
           <CardHeader>
             <CardTitle>{t.sharedRevenueTitle}</CardTitle>
