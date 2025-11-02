@@ -1,27 +1,34 @@
+/**
+ * ✅ Artistry Havens Firebase Backend
+ * Handles: User creation, message processing with Genkit AI,
+ * and HTTPS callable endpoints.
+ */
 
-const { onDocumentCreated } = require("firebase-functions/v2/firestore");
-const { onCall, onRequest } = require("firebase-functions/v2/https");
-const { setGlobalOptions } = require("firebase-functions/v2/options");
-const { logger } = require("firebase-functions");
+const {onDocumentCreated} = require("firebase-functions/v2/firestore");
+const {onCall, onRequest, HttpsError} = require("firebase-functions/v2/https");
+const {setGlobalOptions} = require("firebase-functions/v2/options");
+const {logger} = require("firebase-functions");
 const admin = require("firebase-admin");
 
-/* eslint-disable no-undef */
-const { processPrompt } = require("./ai/genkit.js");
-/* eslint-enable no-undef */
+// 🔹 Import AI module (updated to match new export)
+const {generateResponse} = require("./ai/genkit.js");
 
-// 🌍 Global region
-setGlobalOptions({ region: "asia-south2" });
+// 🌍 Set global region for all functions
+setGlobalOptions({region: "asia-south2"});
 
-// 🏗 Initialize Firebase Admin for the correct project
+// 🏗 Initialize Firebase Admin SDK
 admin.initializeApp({
   projectId: "artistry-havens-1-654483-678d5",
 });
 
-// ✅ Connect to the default Firestore database
+// 🔹 Firestore reference
 const db = admin.firestore();
 logger.info("✅ Connected to Firestore database: (default)");
 
-// 🌐 Simple health check endpoint
+/**
+ * 🌐 Health Check Endpoint
+ * Confirms backend + region + Firestore connection.
+ */
 exports.testBackend = onRequest((req, res) => {
   logger.info("testBackend function called!");
   res.status(200).send({
@@ -32,23 +39,24 @@ exports.testBackend = onRequest((req, res) => {
 });
 
 /**
- * ✅ Firestore trigger when a new user document is created.
+ * 👤 Trigger: When a new user document is created in Firestore.
+ * Path: users/{userId}
  */
 exports.onUserCreate = onDocumentCreated("users/{userId}", async (event) => {
   const snap = event.data;
   if (!snap) {
-    logger.error("No data associated with the onUserCreate event.");
+    logger.error("No data in onUserCreate event.");
     return;
   }
+
   const userData = snap.data();
   const userId = event.params.userId;
 
-  logger.log(`🧑‍💻 New user created with ID: ${userId}`, userData);
+  logger.info(`🧑‍💻 New user created: ${userId}`, userData);
 
   // Basic validation
   if (!userData.email || !userData.name || !userData.role) {
-    logger.error(`User ${userId} is missing email, name, or role.`);
-    // Optionally, you could send a notification or perform a cleanup action.
+    logger.warn(`User ${userId} missing email, name, or role.`);
   }
 
   // Add createdAt if not set
@@ -61,27 +69,28 @@ exports.onUserCreate = onDocumentCreated("users/{userId}", async (event) => {
 });
 
 /**
- * ✅ Firestore trigger when a new message document is created.
+ * 💬 Trigger: When a new message document is created.
+ * Path: messages/{messageId}
  */
 exports.onMessageCreate = onDocumentCreated(
     "messages/{messageId}",
     async (event) => {
       const snap = event.data;
       if (!snap) {
-        logger.log("No data associated with the onMessageCreate event.");
+        logger.warn("No data in onMessageCreate event.");
         return;
       }
+
       const messageData = snap.data();
+      const messageId = event.params.messageId;
 
       if (!messageData || !messageData.text) {
-        logger.log(
-            "Message document has no text, skipping AI processing.",
-        );
+        logger.info(`Message ${messageId} missing text; skipping.`);
         return;
       }
 
       try {
-        const aiResponseText = await processPrompt(messageData.text);
+        const aiResponseText = await generateResponse(messageData.text);
 
         await db.collection("aiRequests").add({
           userId: messageData.senderId || "unknown",
@@ -90,36 +99,37 @@ exports.onMessageCreate = onDocumentCreated(
           createdAt: admin.firestore.FieldValue.serverTimestamp(),
         });
 
-        logger.log(
-            "🤖 AI response stored successfully for message:",
-            event.params.messageId,
-        );
+        logger.info(`🤖 AI response stored for message: ${messageId}`);
       } catch (error) {
-        logger.error("❌ Error processing message with Genkit AI:", error);
+        logger.error("❌ Genkit AI processing failed:", error);
       }
     },
 );
 
 /**
- * ✅ HTTPS Callable function for AI responses.
+ * ⚙️ HTTPS Callable: Generate AI response from frontend.
+ * Requires auth.
  */
 exports.generateAIResponse = onCall(async (request) => {
   const context = request.auth;
   const data = request.data;
 
   if (!context || !context.uid) {
-    throw new onCall.HttpsError("unauthenticated", "User must be logged in.");
+    throw new HttpsError("unauthenticated", "User must be logged in.");
   }
 
-  const { prompt } = data;
+  const {prompt} = data;
   const userId = context.uid;
 
   if (!prompt || typeof prompt !== "string" || prompt.trim() === "") {
-    throw new onCall.HttpsError("invalid-argument", "'prompt' must be a non-empty string.");
+    throw new HttpsError(
+        "invalid-argument",
+        "'prompt' must be a non-empty string.",
+    );
   }
 
   try {
-    const aiResponseText = await processPrompt(prompt);
+    const aiResponseText = await generateResponse(prompt);
 
     await db.collection("aiRequests").add({
       userId,
@@ -128,9 +138,10 @@ exports.generateAIResponse = onCall(async (request) => {
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    return { response: aiResponseText };
+    logger.info(`✅ AI response generated for user: ${userId}`);
+    return {response: aiResponseText};
   } catch (error) {
-    logger.error("❌ Error in generateAIResponse:", error);
-    throw new onCall.HttpsError("internal", "Failed to generate AI response.");
+    logger.error("❌ generateAIResponse failed:", error);
+    throw new HttpsError("internal", "Failed to generate AI response.");
   }
 });
