@@ -1,63 +1,77 @@
-# Artistry Havens - Project README
+# Artistry Havens - Empowering Artisans with AI
 
-## 1. Application Context
+Artistry Havens is a modern, mobile-first marketplace designed to connect artisans with a global audience of buyers and sponsors. By integrating powerful AI tools, the platform removes the technical barriers to e-commerce, allowing creators to focus on what they do best: creating.
 
-Artistry Havens is a modern, AI-enhanced marketplace designed to connect artisans with buyers and sponsors. Built with Next.js, Firebase, and Google's Genkit, it provides a seamless platform for three distinct user roles:
+## What is Artistry Havens?
 
-*   **Artisans:** Can showcase their creations, manage their digital storefront, track sales, and interact with sponsors.
-*   **Buyers:** Can discover unique handmade goods, browse by category, and even use AI to design custom products.
-*   **Sponsors:** Can discover and support talented artisans, fostering the creative community.
+This application provides a seamless, multilingual platform for three distinct user roles:
 
-The application is multilingual and features a rich, interactive user interface powered by ShadCN components and Tailwind CSS.
+*   **Artisans:** Can showcase their creations, manage a digital storefront, track sales, and connect with sponsors, all with the help of an AI assistant.
+*   **Buyers:** Can discover unique handmade goods, browse by category, and even use AI to design custom products and commission them from artisans.
+*   **Sponsors:** Can discover and support talented artisans, fostering the creative community and sharing in their success.
 
-## 2. Running Locally & Connecting to Firebase
+---
 
-The application is configured to connect to your live Firebase project when you run it locally. This allows you to see real-time updates in your Firebase Console.
+## Key Features
 
-**Before you start:**
+The platform is packed with features designed to create an intuitive and powerful experience for every user.
 
-1.  **Add Your API Key:** Open the newly created `.env.local` file in the root of the project. Replace `YOUR_API_KEY_HERE` with your actual Google AI (Gemini) API key.
-2.  **Enable Phone Sign-In:** Go to your **Firebase Console**, navigate to **Authentication -> Sign-in method**, and ensure the **Phone** provider is enabled.
-3.  **Run the App:** Start the local development server using `npm run dev`.
+### For Artisans:
+*   **AI-Powered Product Creation:** Simply upload a photo of your craft, and our AI will automatically generate a compelling product name, marketing description, category, and even a unique backstory.
+*   **AI Image Enhancement:** With a single click, improve the lighting, sharpness, and color balance of your product photos to make them look professional.
+*   **Multilingual Voice Navigation:** Navigate your dashboard, manage orders, and check statistics by speaking commands in your native language.
+*   **Business Dashboard:** Track your revenue, sales, and product likes over time with simple, visual charts and get AI-powered insights on your performance.
+*   **Order & Sponsor Management:** A clear interface to manage incoming orders and review sponsorship requests.
 
-Now, when you register a new user in your locally running application, they will immediately appear in the **Authentication -> Users** tab of your Firebase project.
+### For Buyers:
+*   **AI-Powered Custom Design:** Have a unique idea? Describe it with text or upload a reference image, and our AI will generate a visual concept of your custom product.
+*   **Direct-to-Artisan Requests:** Send your AI-generated designs directly to an artisan to start a conversation about bringing your idea to life.
+*   **Curated Discovery:** Browse trending products, best-sellers, and shop by category to find the perfect handmade item.
 
-## 3. Current Progress & Features
+### For Sponsors:
+*   **Discover & Support:** Find talented artisans by browsing their work and offer them financial support.
+*   **Track Your Impact:** A dedicated dashboard shows the revenue generated from your sponsorships, allowing you to see the direct impact of your contributions.
 
-The front-end of the application is substantially complete and functional. Key features implemented include:
+---
 
-*   **Multi-Role Authentication:** Secure phone number and OTP-based login for Artisans, Buyers, and Sponsors using Firebase Authentication.
-*   **Artisan Portal:**
-    *   AI-assisted product creation (image upload, AI-generated descriptions, names, and stories).
-    *   Dashboard for tracking revenue, sales, and likes.
-    *   Management screens for orders and sponsorships.
-    *   AI-powered voice navigation to move between pages.
-*   **Buyer Experience:**
-    *   Browse products by category.
-    *   View detailed product pages.
-    *   Use AI to generate custom product designs from text descriptions or reference images.
-*   **Sponsor Dashboard:**
-    *   Discover artisans and their products to sponsor.
+## Technical Architecture
 
-## 4. Recently Resolved File Issues
+Artistry Havens is built on a modern, serverless stack designed for scalability and performance.
 
-The application recently experienced several stability issues that have now been fixed:
+*   **Frontend:** **Next.js 15** (App Router) with **React** and **TypeScript**.
+*   **UI:** **ShadCN UI** component library, styled with **Tailwind CSS**.
+*   **Backend:** **Firebase Functions** for serverless logic and the **Next.js** server environment.
+*   **Database:** **Cloud Firestore** (NoSQL) for all application data.
+*   **Authentication:** **Firebase Authentication** for secure phone & OTP sign-in.
+*   **AI Integration:** **Genkit** is used to orchestrate calls to **Google AI Platform** models:
+    *   **Gemini 2.5 Flash:** Powers product description generation, voice navigation, and performance insights.
+    *   **Imagen 4:** Generates new product images from text descriptions.
+    *   **Gemini 2.5 Flash Image:** Enhances product photos and creates new visuals from reference images.
+    *   **TTS (Text-to-Speech):** Provides audio playback for AI-generated reviews.
+*   **Hosting:** The application is hosted on **Firebase App Hosting**.
 
-*   **Hydration Errors:** Multiple pages were attempting to access browser-only APIs like `localStorage` during the initial server-side render. This caused a mismatch with the client-side render, leading to application crashes.
-    *   **Fix:** All `localStorage` access has been moved into `useEffect` hooks, ensuring this code only runs on the client-side after the page has fully loaded.
+---
 
-*   **Invalid HTML Structure:** Some components had incorrect HTML nesting (e.g., a `<div>` inside a `<p>` tag), which also contributed to hydration errors.
-    *   **Fix:** The HTML structure has been corrected to be valid, resolving these specific errors.
+## Running Locally
 
-*   **Firebase Initialization Errors:** The application was throwing a `Firebase: No Firebase App '[DEFAULT]' has been created` error because Firebase services were being accessed before the app was properly initialized.
-    *   **Fix:** The root layout (`src/app/layout.tsx`) has been wrapped with a `FirebaseClientProvider`, which ensures that the Firebase app is initialized once and made available to all pages before it is needed.
+To run the Artistry Havens application on your local machine, follow these steps:
 
-## 5. How to Create the Backend
+1.  **Install Dependencies:**
+    ```bash
+    npm install
+    ```
 
-Currently, the application is running with mock data and a front-end implementation of Firebase. To make it a fully functional, data-persistent application, the Firebase backend needs to be provisioned.
+2.  **Set Up Environment Variables:**
+    Create a file named `.env.local` in the root of the project and add your Google AI (Gemini) API key:
+    ```
+    GEMINI_API_KEY=YOUR_API_KEY_HERE
+    ```
 
-The backend is defined in `docs/backend.json`, which outlines the data schemas for Firestore and the authentication providers.
+3.  **Enable Firebase Phone Sign-In:**
+    Go to your **Firebase Console**, navigate to **Authentication -> Sign-in method**, and ensure the **Phone** provider is enabled for your project.
 
-**Next Step:**
-To create and provision the necessary Firebase backend resources (Firestore database and Authentication), you will need to **call the `RequestFirebaseBackendTool`**. This will set up the project scaffolding based on the `backend.json` file, enabling real data storage and user management.
-# Artistry_Havens-pilot
+4.  **Run the Development Server:**
+    ```bash
+    npm run dev
+    ```
+    The application will be available at `http://localhost:9002`.
