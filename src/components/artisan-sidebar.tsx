@@ -67,6 +67,7 @@ export function HeaderActions() {
     const hasUnread = notifications.some(n => !n.read);
 
     const [isListening, setIsListening] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
     const recognitionRef = useRef<any>(null);
     const [spokenCommand, setSpokenCommand] = useState<string | null>(null);
 
@@ -112,10 +113,16 @@ export function HeaderActions() {
         recognition.interimResults = false;
 
         recognition.onstart = () => setIsListening(true);
-        recognition.onend = () => setIsListening(false);
+        recognition.onend = () => {
+            setIsListening(false);
+            // Don't show an error if we are already processing a valid command
+            if (!spokenCommand && !isProcessing) {
+                // This will catch cases where the mic turns off without any result
+                // console.log('Mic stopped without a command being processed.');
+            }
+        };
         recognition.onerror = (event: any) => {
             if (event.error === 'no-speech' || event.error === 'aborted') {
-                setIsListening(false);
                 return; // Don't show a toast for these "errors"
             }
             console.error('Speech recognition error:', event.error);
@@ -125,27 +132,30 @@ export function HeaderActions() {
                     title: t_sidebar.voiceNetworkErrorTitle,
                     description: t_sidebar.voiceNetworkErrorDesc,
                 });
-            } else {
+            } else if (!isProcessing) { // Only show other errors if not already processing
                 toast({ 
                     variant: 'destructive', 
                     title: t_sidebar.voiceErrorTitle,
                     description: t_sidebar.voiceErrorDesc 
                 });
             }
-            setIsListening(false);
         };
 
         recognition.onresult = (event: any) => {
             const command = event.results[0][0].transcript;
-            setSpokenCommand(command);
+            if (command) {
+                setSpokenCommand(command);
+            }
         };
 
-    }, [toast, t_sidebar.voiceErrorDesc, t_sidebar.voiceErrorTitle, t_sidebar.voiceNetworkErrorDesc, t_sidebar.voiceNetworkErrorTitle]);
+    }, [toast, t_sidebar.voiceErrorDesc, t_sidebar.voiceErrorTitle, t_sidebar.voiceNetworkErrorDesc, t_sidebar.voiceNetworkErrorTitle, isProcessing, spokenCommand]);
 
     useEffect(() => {
         if (!spokenCommand) {
             return;
         }
+        
+        setIsProcessing(true); // Mark as processing
 
         const processCommand = async () => {
             toast({ title: t_sidebar.voiceHeard, description: `"${spokenCommand}"` });
@@ -171,6 +181,7 @@ export function HeaderActions() {
                 toast({ variant: 'destructive', title: t_sidebar.aiError, description: t_sidebar.aiErrorDesc });
             } finally {
                 setSpokenCommand(null); // Reset command after processing
+                setIsProcessing(false); // Finish processing
             }
         };
 
@@ -418,3 +429,5 @@ export default function ArtisanSidebar({ closeSheet }: ArtisanSidebarProps) {
         </div>
     );
 }
+
+    
