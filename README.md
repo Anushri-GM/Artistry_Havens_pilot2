@@ -61,11 +61,12 @@ To run the Artistry Havens application on your local machine, follow these steps
     npm install
     ```
 
-2.  **Set Up Environment Variables:**
+2.  **Set Up Local Environment Variables:**
     Create a file named `.env.local` in the root of the project and add your Google AI (Gemini) API key:
     ```
     GEMINI_API_KEY=YOUR_API_KEY_HERE
     ```
+    This file is for local development only and will not be uploaded to your hosting provider.
 
 3.  **Enable Firebase Phone Sign-In:**
     Go to your **Firebase Console**, navigate to **Authentication -> Sign-in method**, and ensure the **Phone** provider is enabled for your project.
@@ -75,3 +76,16 @@ To run the Artistry Havens application on your local machine, follow these steps
     npm run dev
     ```
     The application will be available at `http://localhost:9002`.
+
+## Deploying to Production (Vercel)
+
+When deploying your application to a hosting provider like Vercel, you must provide your `GEMINI_API_KEY` in the project settings for the AI features to work.
+
+1.  **Go to your Vercel project dashboard.**
+2.  Navigate to the **Settings** tab.
+3.  Click on **Environment Variables** in the side menu.
+4.  Add a new variable:
+    *   **Name:** `GEMINI_API_KEY`
+    *   **Value:** Paste your actual Gemini API key.
+5.  Ensure the variable is available for the **Production** environment.
+6.  **Redeploy** your application to apply the changes.
