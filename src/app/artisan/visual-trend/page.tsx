@@ -62,13 +62,7 @@ export default function VisualTrendPage() {
             </header>
 
             <Card className="w-full">
-                <CardHeader>
-                    <CardTitle>{t.visualTrendTitle}</CardTitle>
-                    <CardDescription>
-                        {t.visualTrendDescription}
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="pb-8">
+                <CardContent className="pb-8 pt-6">
                     <ChartContainer
                         config={chartConfig}
                         className="mx-auto aspect-square h-[300px] w-full"
