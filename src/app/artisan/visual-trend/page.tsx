@@ -84,14 +84,18 @@ export default function VisualTrendPage() {
                                 dataKey="buyers"
                                 fill="var(--color-buyers)"
                                 fillOpacity={0.6}
-                                dot={({ payload, ...rest }: DotProps) => (
-                                    <RechartsPrimitive.Dot
-                                        {...rest}
-                                        r={4}
-                                        fillOpacity={1}
-                                        fill={payload.fill}
-                                    />
-                                )}
+                                dot={({ payload, ...rest }: DotProps & { key?: React.Key }) => {
+                                    const { key, ...dotProps } = rest;
+                                    return (
+                                        <RechartsPrimitive.Dot
+                                            key={key}
+                                            {...dotProps}
+                                            r={4}
+                                            fillOpacity={1}
+                                            fill={payload.fill}
+                                        />
+                                    );
+                                }}
                             />
                         </RadarChart>
                     </ChartContainer>
