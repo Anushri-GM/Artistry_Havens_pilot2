@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import { Logo } from '@/components/icons';
 import Link from 'next/link';
@@ -35,6 +35,7 @@ export default function ArtisanRegisterPage() {
   const t = translations.artisan_register_page;
   const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
   const recaptchaContainerRef = useRef<HTMLDivElement>(null);
+  const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
   const auth = useAuth();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -45,6 +46,15 @@ export default function ArtisanRegisterPage() {
     },
   });
 
+  useEffect(() => {
+    if (auth && recaptchaContainerRef.current && !recaptchaVerifierRef.current) {
+        recaptchaVerifierRef.current = new RecaptchaVerifier(auth, recaptchaContainerRef.current, {
+            'size': 'invisible'
+        });
+    }
+  }, [auth]);
+
+
   const handleSendOtp = useCallback(async () => {
     const { mobileNumber } = form.getValues();
     const mobileResult = z.string().regex(/^\d{10}$/).safeParse(mobileNumber);
@@ -54,7 +64,6 @@ export default function ArtisanRegisterPage() {
       return;
     }
 
-    // Bypass for test number
     if (mobileNumber === '8438610450') {
         form.setValue('otp', '123456');
         setOtpSent(true);
@@ -70,24 +79,17 @@ export default function ArtisanRegisterPage() {
     const phoneNumber = `+91${mobileNumber}`;
 
     try {
-        if (!recaptchaContainerRef.current) {
-            throw new Error("reCAPTCHA container not found.");
-        }
-        
-        // Ensure the container is empty before creating a new verifier
-        recaptchaContainerRef.current.innerHTML = '';
+      if (!recaptchaVerifierRef.current) {
+        throw new Error("reCAPTCHA verifier not initialized.");
+      }
 
-        const verifier = new RecaptchaVerifier(auth, recaptchaContainerRef.current, {
-            'size': 'invisible'
-        });
-
-        const result = await signInWithPhoneNumber(auth, phoneNumber, verifier);
-        setConfirmationResult(result);
-        setOtpSent(true);
-        toast({
-            title: t.otpSentToast,
-            description: t.otpSentToastDesc,
-        });
+      const result = await signInWithPhoneNumber(auth, phoneNumber, recaptchaVerifierRef.current);
+      setConfirmationResult(result);
+      setOtpSent(true);
+      toast({
+          title: t.otpSentToast,
+          description: t.otpSentToastDesc,
+      });
     } catch (error: any) {
       console.error("signInWithPhoneNumber error:", error);
       toast({
@@ -96,7 +98,7 @@ export default function ArtisanRegisterPage() {
         description: error.message,
       });
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
   }, [auth, form, language, t.invalidNumber, t.otpSentToast, t.otpSentToastDesc, toast, t.errorSendingOtp]);
 
@@ -107,7 +109,6 @@ export default function ArtisanRegisterPage() {
       return;
     }
 
-    // Test number bypass
     if (values.mobileNumber === '8438610450' && values.otp === '123456') {
         toast({
             title: t.welcomeToast,
