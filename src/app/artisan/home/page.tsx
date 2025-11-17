@@ -5,7 +5,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { products as allProducts } from '@/lib/data';
+import { products as allProducts, productCategories } from '@/lib/data';
 import ProductCard from '@/components/product-card';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -22,10 +22,23 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import Autoplay from 'embla-carousel-autoplay';
 import TutorialDialog from '@/components/tutorial-dialog';
 import { getCommunityTrendInsights } from '@/ai/flows/community-trend-insights';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import { PolarAngleAxis, PolarGrid, PolarRadiusAxis, Radar, RadarChart } from "recharts"
 
 const formSchema = z.object({
   productDescription: z.string().min(10, 'Description must be at least 10 characters long.'),
 });
+
+const buyerCategoryData = [
+  { category: "Pottery", buyers: 400, fill: "var(--color-chart-1)" },
+  { category: "Jewelry", buyers: 300, fill: "var(--color-chart-2)" },
+  { category: "Textiles", buyers: 278, fill: "var(--color-chart-3)" },
+  { category: "Paintings", buyers: 189, fill: "var(--color-chart-4)" },
+  { category: "Woodwork", buyers: 239, fill: "var(--color-chart-5)" },
+  { category: "Sculpture", buyers: 200, fill: "var(--color-chart-1)" },
+  { category: "Metalwork", buyers: 150, fill: "var(--color-chart-2)" },
+]
+
 
 export default function ArtisanHomePage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -177,6 +190,19 @@ export default function ArtisanHomePage() {
         });
     }
   }, [toast, t.savedToCollectionToast]);
+  
+  const chartConfig = {
+    buyers: {
+      label: "Buyers",
+    },
+    ...productCategories.reduce((acc, cat, index) => ({
+        ...acc,
+        [cat]: {
+            label: cat,
+            color: `hsl(var(--chart-${index + 1}))`
+        }
+    }), {})
+  }
 
   return (
     <div className="flex flex-col px-2 py-4 space-y-6 relative">
@@ -231,9 +257,9 @@ export default function ArtisanHomePage() {
             </section>
         </div>
 
-        {/* AI Review Section */}
-        <section>
-             <Card className="max-w-sm">
+        {/* AI Review & Visual Trend Section */}
+        <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
+             <Card className="w-full">
               <CardHeader className="pb-4">
                 <CardTitle className="text-md leading-tight">{t.aiReviewTitle}</CardTitle>
                 <CardDescription className="text-xs">{t.aiReviewDescription}</CardDescription>
@@ -276,8 +302,41 @@ export default function ArtisanHomePage() {
               </Form>
             </Card>
             
+            <Card className="w-full">
+                <CardHeader>
+                    <CardTitle className="text-md">Visual Trend</CardTitle>
+                    <CardDescription className="text-xs">
+                        Proportion of buyers for each category
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="pb-0">
+                    <ChartContainer
+                        config={chartConfig}
+                        className="mx-auto aspect-square h-[250px]"
+                    >
+                        <RadarChart data={buyerCategoryData}>
+                            <ChartTooltip
+                            cursor={false}
+                            content={<ChartTooltipContent hideLabel />}
+                            />
+                            <PolarAngleAxis dataKey="category" />
+                            <PolarGrid />
+                            <Radar
+                            dataKey="buyers"
+                            fill="var(--color-buyers)"
+                            fillOpacity={0.6}
+                            dot={{
+                                r: 4,
+                                fillOpacity: 1,
+                            }}
+                            />
+                        </RadarChart>
+                    </ChartContainer>
+                </CardContent>
+            </Card>
+
             {result && (
-              <Card className="mt-4 max-w-sm">
+              <Card className="mt-4 max-w-sm md:col-span-2">
                 <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
                         <CardTitle className="text-md">{t.aiGeneratedInsightsTitle}</CardTitle>
