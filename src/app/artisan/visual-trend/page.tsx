@@ -5,30 +5,31 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { PolarAngleAxis, PolarGrid, Radar, RadarChart } from "recharts";
+import { PolarAngleAxis, PolarGrid, Radar, RadarChart, type DotProps } from "recharts";
+import * as RechartsPrimitive from "recharts"
 import { productCategories, categories as baseCategories } from '@/lib/data';
 import { ChevronLeft } from 'lucide-react';
 import { useTranslation } from '@/context/translation-context';
 
 const buyerCategoryData = [
-  { category: "Pottery", buyers: 400, fill: "var(--color-pottery)" },
-  { category: "Jewelry", buyers: 300, fill: "var(--color-jewelry)" },
-  { category: "Textiles", buyers: 278, fill: "var(--color-textiles)" },
-  { category: "Paintings", buyers: 189, fill: "var(--color-paintings)" },
-  { category: "Woodwork", buyers: 239, fill: "var(--color-woodwork)" },
-  { category: "Sculpture", buyers: 200, fill: "var(--color-sculpture)" },
-  { category: "Metalwork", buyers: 150, fill: "var(--color-metalwork)" },
+  { category: "Pottery", buyers: 400, fill: "hsl(var(--chart-1))" },
+  { category: "Jewelry", buyers: 300, fill: "hsl(var(--chart-2))" },
+  { category: "Textiles", buyers: 278, fill: "hsl(var(--chart-3))" },
+  { category: "Paintings", buyers: 189, fill: "hsl(var(--chart-4))" },
+  { category: "Woodwork", buyers: 239, fill: "hsl(var(--chart-5))" },
+  { category: "Sculpture", buyers: 200, fill: "hsl(var(--chart-1))" },
+  { category: "Metalwork", buyers: 150, fill: "hsl(var(--chart-2))" },
 ];
 
 const chartConfig = {
     buyers: {
       label: "Buyers",
     },
-    ...baseCategories.reduce((acc, cat) => ({
+    ...baseCategories.reduce((acc, cat, index) => ({
         ...acc,
         [cat.name.toLowerCase()]: {
             label: cat.name,
-            color: `hsl(var(--chart-${cat.id}))`
+            color: `hsl(var(--chart-${(index % 5) + 1}))`
         }
     }), {})
 };
@@ -83,7 +84,7 @@ export default function VisualTrendPage() {
                                 dataKey="buyers"
                                 fill="var(--color-buyers)"
                                 fillOpacity={0.6}
-                                dot={({ payload, ...rest }) => (
+                                dot={({ payload, ...rest }: DotProps) => (
                                     <RechartsPrimitive.Dot
                                         {...rest}
                                         r={4}
