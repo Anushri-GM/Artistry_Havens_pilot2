@@ -192,7 +192,7 @@ export default function ArtisanHomePage() {
       <div className="space-y-8">
         
         <Link href="/artisan/visual-trend" passHref>
-          <Button variant="outline" className="w-full h-12">
+          <Button className="w-full h-12 bg-yellow-300 text-yellow-900 hover:bg-yellow-400">
             <BarChart className="mr-2 h-5 w-5" />
             {t.visualTrendButton}
           </Button>
@@ -316,5 +316,7 @@ export default function ArtisanHomePage() {
     </div>
   );
 }
+
+    
 
     
