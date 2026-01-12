@@ -233,7 +233,7 @@ export default function AdvertisementPage() {
 
         <div className="flex justify-end mb-4">
             <Link href="/artisan/advertisement/history" passHref>
-                <Button variant="outline">View Advertisements</Button>
+                <Button variant="outline" className="bg-yellow-200 text-yellow-800 hover:bg-yellow-300">View Advertisements</Button>
             </Link>
         </div>
 
@@ -242,7 +242,8 @@ export default function AdvertisementPage() {
           <CardDescription>Upload 1 to 3 product photos to create a short video advertisement with AI.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="flex flex-col gap-2">
+          <div className="space-y-2">
+            <Label>Product Photos</Label>
             <Button
               onClick={() => fileInputRef.current?.click()}
               variant="outline"
@@ -288,7 +289,7 @@ export default function AdvertisementPage() {
           <div className="space-y-2">
             <Label htmlFor="description-prompt" className="flex items-center gap-2 font-semibold">
                 <FileText className="h-5 w-5" />
-                Advertisement Description
+                Video Prompt
             </Label>
             <Textarea
                 id="description-prompt"
@@ -297,12 +298,11 @@ export default function AdvertisementPage() {
                 onChange={(e) => setAdvertisementPrompt(e.target.value)}
                 className="h-28"
             />
-            </div>
             <Button onClick={handleGenerateDescription} disabled={isGeneratingDesc || imageFiles.length === 0} className="w-full">
                 {isGeneratingDesc ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
                 {isGeneratingDesc ? 'Generating Description...' : 'Generate Description'}
             </Button>
-
+          </div>
 
           <Button onClick={handleGenerateVideo} disabled={isGeneratingVideo || imageFiles.length === 0 || !advertisementPrompt} className="w-full">
             {isGeneratingVideo ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Film className="mr-2 h-4 w-4" />}
@@ -310,8 +310,7 @@ export default function AdvertisementPage() {
           </Button>
 
           {generatedVideo && (
-            <div className="space-y-4">
-              <Card>
+            <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2"><Film className="h-5 w-5" />Generated Video</CardTitle>
                 </CardHeader>
@@ -334,8 +333,7 @@ export default function AdvertisementPage() {
                         {isSaving ? 'Saving...' : 'Save Advertisement'}
                     </Button>
                 </CardContent>
-              </Card>
-            </div>
+            </Card>
           )}
         </CardContent>
       </Card>
