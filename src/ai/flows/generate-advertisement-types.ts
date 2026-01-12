@@ -27,6 +27,10 @@ export type GenerateAdvertisementOutput = z.infer<typeof GenerateAdvertisementOu
 export const GenerateAdvertisementDescriptionInputSchema = z.object({
     artisanName: z.string().describe("The name of the artisan."),
     productCategories: z.array(z.string()).describe("A list of product categories."),
+    images: z.array(z.object({
+        url: z.string().describe("A product photo as a data URI."),
+        contentType: z.string().describe('The MIME type of the image.'),
+    })).describe("An array of product images to use for generating the description."),
 });
 export type GenerateAdvertisementDescriptionInput = z.infer<typeof GenerateAdvertisementDescriptionInputSchema>;
 

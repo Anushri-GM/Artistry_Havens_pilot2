@@ -22,15 +22,16 @@ const prompt = ai.definePrompt({
     name: 'generateAdvertisementDescriptionPrompt',
     input: { schema: GenerateAdvertisementDescriptionInputSchema },
     output: { schema: GenerateAdvertisementDescriptionOutputSchema },
-    prompt: `You are a creative director. Write a short, elegant, and detailed prompt for a video generation model like Veo.
+    prompt: `You are a creative director. Analyze the provided images and write a short, elegant, and detailed prompt for a video generation model like Veo.
     The goal is to create an 8-second video advertisement for an artisan.
 
     Artisan's Name: {{{artisanName}}}
     Specializes in: {{#each productCategories}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}
 
     The prompt should describe a scene that is:
+    - Based on the content of the images provided.
     - Artistic, authentic, and high-quality.
-    - Highlights the craftsmanship and beauty of the products.
+    - Highlights the craftsmanship and beauty of the products shown in the images.
     - Mentions the artisan's name and their craft categories.
     - Evokes a feeling of creativity and passion.
     - Includes instructions for smooth transitions between shots if multiple images are used as reference.
@@ -38,7 +39,10 @@ const prompt = ai.definePrompt({
     
     Example: "A cinematic shot of handmade crafts by an artisan named Elena Vance, specializing in Pottery, Glasswork. Smoothly transition between shots of a beautifully crafted ceramic vase and a delicate glass sculpture, highlighting the textures and light interplay. The overall mood should be artistic, authentic, and high-quality, showcasing the passion and skill of the creator. Generate with elegant, ambient background music."
 
-    Now, generate a new prompt based on the provided artisan details.
+    Now, generate a new prompt based on the provided artisan details and the following images:
+    {{#each images}}
+    {{media url=this.url}}
+    {{/each}}
     `,
 });
 

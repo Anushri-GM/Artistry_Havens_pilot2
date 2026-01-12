@@ -102,11 +102,22 @@ export default function AdvertisementPage() {
   };
 
   const handleGenerateDescription = async () => {
+    if (imageFiles.length === 0) {
+      setError('Please upload at least one photo to generate a description.');
+      toast({
+        variant: 'destructive',
+        title: 'No Images Uploaded',
+        description: 'Upload photos to create a relevant video description.',
+      });
+      return;
+    }
+
     setIsGeneratingDesc(true);
     try {
         const { description } = await generateAdvertisementDescription({
             artisanName,
-            productCategories: artisanCategories
+            productCategories: artisanCategories,
+            images: imageFiles.map(img => ({ url: img.dataUrl, contentType: img.contentType }))
         });
         setAdvertisementPrompt(description);
         toast({
@@ -287,7 +298,7 @@ export default function AdvertisementPage() {
                 className="h-28"
             />
             </div>
-            <Button onClick={handleGenerateDescription} disabled={isGeneratingDesc} className="w-full">
+            <Button onClick={handleGenerateDescription} disabled={isGeneratingDesc || imageFiles.length === 0} className="w-full">
                 {isGeneratingDesc ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
                 {isGeneratingDesc ? 'Generating Description...' : 'Generate Description'}
             </Button>
