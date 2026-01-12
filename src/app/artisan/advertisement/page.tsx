@@ -34,7 +34,6 @@ export default function AdvertisementPage() {
   const [artisanCategories, setArtisanCategories] = useState<string[]>([]);
 
   useEffect(() => {
-    // In a real app, this data would come from the logged-in user's profile
     const storedProfile = localStorage.getItem('artisanProfile');
     if (storedProfile) {
         const profile = JSON.parse(storedProfile);
@@ -43,7 +42,6 @@ export default function AdvertisementPage() {
         setArtisanName(artisans[0].name);
     }
     
-    // For this example, we'll assign some default categories
     setArtisanCategories(productCategories.slice(0, 2));
 
   }, []);
@@ -59,7 +57,7 @@ export default function AdvertisementPage() {
     }
 
     setError(null);
-    setGeneratedVideo(null); // Clear previous results
+    setGeneratedVideo(null);
     
     const promises = Array.from(files).map(file => {
       return new Promise<ImageFile>((resolve, reject) => {
@@ -181,6 +179,17 @@ export default function AdvertisementPage() {
             </Alert>
           )}
 
+          {generatedVideo && (
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><FileText className="h-5 w-5" />Video Description</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-sm text-muted-foreground">{generatedVideo.description}</p>
+                </CardContent>
+            </Card>
+          )}
+
           <Button onClick={handleGenerate} disabled={isGenerating || imageFiles.length === 0} className="w-full">
             {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
             {isGenerating ? 'Generating Video...' : 'Generate Advertisement'}
@@ -188,14 +197,6 @@ export default function AdvertisementPage() {
 
           {generatedVideo && (
             <div className="space-y-4">
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2"><FileText className="h-5 w-5" />Video Description</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-sm text-muted-foreground">{generatedVideo.description}</p>
-                    </CardContent>
-                </Card>
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2"><Film className="h-5 w-5" />Generated Video</CardTitle>
@@ -223,5 +224,3 @@ export default function AdvertisementPage() {
     </div>
   );
 }
-
-    
