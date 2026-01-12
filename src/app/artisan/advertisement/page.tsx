@@ -12,10 +12,8 @@ import Image from 'next/image';
 import { generateAdvertisement } from '@/ai/flows/generate-advertisement';
 import { generateAdvertisementDescription } from '@/ai/flows/generate-advertisement-description';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { artisans, productCategories } from '@/lib/data';
 import { useTranslation } from '@/context/translation-context';
 import { useRouter } from 'next/navigation';
-import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import type { SavedAdvertisement } from '@/lib/types';
@@ -38,22 +36,7 @@ export default function AdvertisementPage() {
   const [advertisementPrompt, setAdvertisementPrompt] = useState('');
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [artisanName, setArtisanName] = useState('Artisan');
-  const [artisanCategories, setArtisanCategories] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
-
-  useEffect(() => {
-    const storedProfile = localStorage.getItem('artisanProfile');
-    if (storedProfile) {
-        const profile = JSON.parse(storedProfile);
-        setArtisanName(profile.name || artisans[0].name);
-    } else {
-        setArtisanName(artisans[0].name);
-    }
-    
-    setArtisanCategories(productCategories.slice(0, 2));
-
-  }, []);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -115,8 +98,6 @@ export default function AdvertisementPage() {
     setIsGeneratingDesc(true);
     try {
         const { description } = await generateAdvertisementDescription({
-            artisanName,
-            productCategories: artisanCategories,
             images: imageFiles.map(img => ({ url: img.dataUrl, contentType: img.contentType }))
         });
         setAdvertisementPrompt(description);
