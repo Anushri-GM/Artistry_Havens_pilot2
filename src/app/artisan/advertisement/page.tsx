@@ -6,13 +6,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Upload, Sparkles, Film, FileText, ChevronLeft } from 'lucide-react';
+import { Loader2, Upload, Sparkles, Film, FileText, ChevronLeft, X } from 'lucide-react';
 import Image from 'next/image';
 import { generateAdvertisement } from '@/ai/flows/generate-advertisement';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { artisans, productCategories } from '@/lib/data';
 import { useTranslation } from '@/context/translation-context';
 import { useRouter } from 'next/navigation';
+import { cn } from '@/lib/utils';
 
 interface ImageFile {
   name: string;
@@ -50,16 +51,15 @@ export default function AdvertisementPage() {
     const files = event.target.files;
     if (!files) return;
 
-    if (files.length === 0 || files.length > 3) {
-      setError('Wrong number of photos uploaded. Please select between 1 and 3 photos.');
-      setImageFiles([]);
+    if (imageFiles.length + files.length > 3) {
+      setError('You can select a maximum of 3 photos.');
       return;
     }
 
     setError(null);
     setGeneratedVideo(null);
     
-    const promises = Array.from(files).map(file => {
+    const newFilePromises = Array.from(files).map(file => {
       return new Promise<ImageFile>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -74,8 +74,10 @@ export default function AdvertisementPage() {
       });
     });
 
-    Promise.all(promises)
-      .then(setImageFiles)
+    Promise.all(newFilePromises)
+      .then(newImages => {
+        setImageFiles(prev => [...prev, ...newImages]);
+      })
       .catch(err => {
         console.error(err);
         toast({
@@ -125,6 +127,15 @@ export default function AdvertisementPage() {
       setIsGenerating(false);
     }
   };
+  
+  const handleClearImages = () => {
+    setImageFiles([]);
+    setGeneratedVideo(null);
+    setError(null);
+    if(fileInputRef.current) {
+        fileInputRef.current.value = '';
+    }
+  }
 
   return (
     <div className="container mx-auto p-4 md:p-8">
@@ -142,15 +153,15 @@ export default function AdvertisementPage() {
           <CardDescription>Upload 1 to 3 product photos to create a short video advertisement with AI.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div>
+          <div className="flex flex-col gap-2">
             <Button
               onClick={() => fileInputRef.current?.click()}
               variant="outline"
               className="w-full"
-              disabled={isGenerating}
+              disabled={isGenerating || imageFiles.length >= 3}
             >
               <Upload className="mr-2 h-4 w-4" />
-              Upload Photos (1-3)
+              Upload Photos
             </Button>
             <Input
               ref={fileInputRef}
@@ -163,12 +174,18 @@ export default function AdvertisementPage() {
           </div>
 
           {imageFiles.length > 0 && (
-            <div className="grid grid-cols-3 gap-2">
-              {imageFiles.map((file, index) => (
-                <div key={index} className="relative aspect-square rounded-md overflow-hidden">
-                  <Image src={file.dataUrl} alt={`Preview ${index + 1}`} fill className="object-cover" />
+            <div>
+                <div className="grid grid-cols-3 gap-2 mb-2">
+                {imageFiles.map((file, index) => (
+                    <div key={index} className="relative aspect-square rounded-md overflow-hidden">
+                    <Image src={file.dataUrl} alt={`Preview ${index + 1}`} fill className="object-cover" />
+                    </div>
+                ))}
                 </div>
-              ))}
+                <Button onClick={handleClearImages} variant="destructive" size="sm" className="w-full">
+                    <X className="mr-2 h-4 w-4" />
+                    Clear Images
+                </Button>
             </div>
           )}
 
