@@ -61,6 +61,7 @@ const generateAdvertisementFlow = ai.defineFlow(
 
     const videoPart = operation.output?.message?.content.find(p => p.media?.contentType?.startsWith('video/'));
     if (!videoPart?.media?.url) {
+      console.error("No video part found in operation output:", JSON.stringify(operation.output, null, 2));
       throw new Error('Generated output did not contain a valid video.');
     }
 
