@@ -274,27 +274,23 @@ export default function AdvertisementPage() {
             </Alert>
           )}
           
-          <Card>
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg"><FileText className="h-5 w-5" />Advertisement Description</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                <div className="space-y-2">
-                    <Label htmlFor="description-prompt">Video Prompt</Label>
-                    <Textarea
-                    id="description-prompt"
-                    placeholder="Generate a description or write your own..."
-                    value={advertisementPrompt}
-                    onChange={(e) => setAdvertisementPrompt(e.target.value)}
-                    className="h-28"
-                    />
-                </div>
-                 <Button onClick={handleGenerateDescription} disabled={isGeneratingDesc} className="w-full">
-                    {isGeneratingDesc ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                    {isGeneratingDesc ? 'Generating Description...' : 'Generate Description'}
-                </Button>
-            </CardContent>
-          </Card>
+          <div className="space-y-2">
+            <Label htmlFor="description-prompt" className="flex items-center gap-2 font-semibold">
+                <FileText className="h-5 w-5" />
+                Advertisement Description
+            </Label>
+            <Textarea
+                id="description-prompt"
+                placeholder="Generate a description or write your own..."
+                value={advertisementPrompt}
+                onChange={(e) => setAdvertisementPrompt(e.target.value)}
+                className="h-28"
+            />
+            </div>
+            <Button onClick={handleGenerateDescription} disabled={isGeneratingDesc} className="w-full">
+                {isGeneratingDesc ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                {isGeneratingDesc ? 'Generating Description...' : 'Generate Description'}
+            </Button>
 
 
           <Button onClick={handleGenerateVideo} disabled={isGeneratingVideo || imageFiles.length === 0 || !advertisementPrompt} className="w-full">
