@@ -26,13 +26,13 @@ const prompt = ai.definePrompt({
     The goal is to create an 8-second video advertisement for an artisan's products.
 
     The prompt should describe a scene that is:
-    - Based on the content of the images provided.
+    - Based *only* on the visual content of the images provided.
     - Artistic, authentic, and high-quality.
-    - Highlights the craftsmanship and beauty of the products shown in the images.
+    - Highlights the craftsmanship, textures, and beauty of the products shown.
     - Evokes a feeling of creativity and passion.
-    - Includes instructions for smooth transitions between shots if multiple images are used as reference.
+    - **Crucially, do not include any descriptions of people, faces, or potentially ambiguous actions.** Focus on the product and cinematic style.
     
-    Example: "A cinematic shot of beautifully crafted handmade products. Smoothly transition between shots of a ceramic vase and a delicate glass sculpture, highlighting the textures and light interplay. The overall mood should be artistic, authentic, and high-quality, showcasing the passion and skill of the creator."
+    Example: "A cinematic, slow-panning shot of a beautifully crafted ceramic vase. Light softly illuminates the intricate textures of the glaze. Transition to a delicate glass sculpture, highlighting the interplay of light and shadow. The overall mood is artistic and high-quality."
 
     Now, generate a new prompt based on the following images:
     {{#each images}}
