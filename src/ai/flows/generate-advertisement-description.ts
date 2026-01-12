@@ -30,7 +30,7 @@ const prompt = ai.definePrompt({
     - Artistic, authentic, and high-quality.
     - Highlights the craftsmanship, textures, and beauty of the products shown.
     - Evokes a feeling of creativity and passion.
-    - **Crucially, do not include any descriptions of people, faces, individuals, or potentially ambiguous actions. Focus entirely on the product and the cinematic style.**
+    - **Crucially, the prompt must avoid any descriptions of people, faces, individuals, or potentially ambiguous actions. It must also avoid any themes related to violence, derogatory content, sexual content, or toxic language.** Focus entirely on the product and the cinematic style.
     
     Example: "A cinematic, slow-panning shot of a beautifully crafted ceramic vase. Light softly illuminates the intricate textures of the glaze. Transition to a delicate glass sculpture, highlighting the interplay of light and shadow. The overall mood is artistic and high-quality."
 
