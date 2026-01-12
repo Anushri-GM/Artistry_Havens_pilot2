@@ -30,17 +30,14 @@ const generateAdvertisementFlow = ai.defineFlow(
     inputSchema: GenerateAdvertisementInputSchema,
     outputSchema: GenerateAdvertisementOutputSchema,
   },
-  async ({ prompt, images }) => {
+  async ({ prompt }) => {
 
-    const promptParts = [
-        { text: prompt },
-        ...images.map(image => ({ media: { url: image.url, contentType: image.contentType } })),
-    ];
-    
     // Asynchronous call to the video generation model.
+    // The model will generate a video based on the descriptive text prompt.
+    // We are not passing the images directly to Veo here to avoid conflicting instructions.
     let { operation } = await ai.generate({
       model: googleAI.model('veo-2.0-generate-001'),
-      prompt: promptParts,
+      prompt: prompt,
     });
 
     if (!operation) {
@@ -60,6 +57,7 @@ const generateAdvertisementFlow = ai.defineFlow(
     }
 
     const videoPart = operation.output?.message?.content.find(p => p.media?.contentType?.startsWith('video/'));
+    
     if (!videoPart?.media?.url) {
       console.error("No video part found in operation output:", JSON.stringify(operation.output, null, 2));
       throw new Error('The AI model finished but did not produce a video. This can happen if the prompt or images trigger safety filters. Please try a different prompt or images.');
