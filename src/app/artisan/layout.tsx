@@ -2,24 +2,21 @@
 'use client';
 
 import ArtisanSidebar, { HeaderActions } from '@/components/artisan-sidebar';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { PanelLeft, Plus } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import Link from 'next/link';
 
-export default function ArtisanLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+function ArtisanLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const noSidebarRoutes = ['/artisan/register', '/artisan/category-selection', '/artisan/post-auth', '/artisan/register-recovery'];
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   
-  const showAddProductButton = !pathname.startsWith('/artisan/add-product');
-
+  const isProfileSetupPage = pathname === '/artisan/profile' && searchParams.get('setup') === 'true';
+  const showAddProductButton = !pathname.startsWith('/artisan/add-product') && !isProfileSetupPage;
 
   if (noSidebarRoutes.includes(pathname)) {
     return <main className="h-full overflow-y-auto">{children}</main>;
@@ -60,5 +57,17 @@ export default function ArtisanLayout({
         )}
       </main>
     </div>
+  );
+}
+
+export default function ArtisanLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <Suspense>
+      <ArtisanLayoutContent>{children}</ArtisanLayoutContent>
+    </Suspense>
   );
 }
