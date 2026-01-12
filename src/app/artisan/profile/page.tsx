@@ -11,15 +11,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Edit, Save, Star, Eye, EyeOff, Mic, Upload } from 'lucide-react';
+import { Loader2, Edit, Save, Star, Eye, EyeOff, Upload } from 'lucide-react';
 import { artisans } from '@/lib/data';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { useTranslation } from '@/context/translation-context';
-import { useLanguage } from '@/context/language-context';
-import { cn } from '@/lib/utils';
-import 'regenerator-runtime/runtime';
-import TutorialDialog from '@/components/tutorial-dialog';
 
 
 const profileSchema = z.object({
@@ -30,7 +26,6 @@ const profileSchema = z.object({
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
-type ProfileField = 'name' | 'companyName' | 'address' | 'phone';
 
 function ProfilePageComponent() {
   const router = useRouter();
@@ -41,7 +36,6 @@ function ProfilePageComponent() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const { translations } = useTranslation();
-  const { language } = useLanguage();
   const t = translations.profile_page;
   
   const [artisan, setArtisan] = useState({
@@ -55,10 +49,6 @@ function ProfilePageComponent() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [isListening, setIsListening] = useState(false);
-  const [targetField, setTargetField] = useState<ProfileField | null>(null);
-  const recognitionRef = useRef<any>(null);
-
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
@@ -69,56 +59,6 @@ function ProfilePageComponent() {
     },
   });
   
-  useEffect(() => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (SpeechRecognition) {
-      recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = false;
-      recognitionRef.current.interimResults = false;
-      recognitionRef.current.lang = language;
-
-      recognitionRef.current.onstart = () => setIsListening(true);
-      recognitionRef.current.onend = () => {
-        setIsListening(false);
-        setTargetField(null);
-      };
-      
-      recognitionRef.current.onerror = (event: any) => {
-        if (event.error === 'no-speech' || event.error === 'aborted') {
-            setIsListening(false);
-            return;
-        }
-        console.error('Speech recognition error:', event.error);
-        toast({
-          variant: 'destructive',
-          title: 'Voice Error',
-          description: 'Could not recognize your voice. Please try again.',
-        });
-        setIsListening(false);
-      };
-
-      recognitionRef.current.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
-        if (targetField) {
-          form.setValue(targetField, transcript);
-        }
-      };
-    }
-  }, [language, form, toast, targetField]);
-  
-  const handleMicClick = (field: ProfileField) => {
-    if (!recognitionRef.current) {
-      toast({ variant: 'destructive', title: 'Not Supported', description: 'Voice input is not supported on this browser.' });
-      return;
-    }
-    if (isListening) {
-      recognitionRef.current.stop();
-    } else {
-      setTargetField(field);
-      recognitionRef.current.start();
-    }
-  };
-
   useEffect(() => {
     const storedProfile = localStorage.getItem('artisanProfile');
     const tempPhone = isSetupMode ? localStorage.getItem('tempPhone') : null;
@@ -189,25 +129,6 @@ function ProfilePageComponent() {
     }
     return stars;
   };
-  
-  const renderVoiceInput = (field: ProfileField) => {
-    // Disable voice input for phone number field
-    if (field === 'phone' || !isEditing) return null;
-    return (
-       <Button 
-          type="button" 
-          size="icon" 
-          variant="ghost" 
-          onClick={() => handleMicClick(field)}
-          className={cn(
-              "absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8", 
-              isListening && targetField === field && "bg-destructive text-destructive-foreground animate-pulse"
-          )}
-        >
-          <Mic className="h-4 w-4" />
-        </Button>
-    )
-  }
 
   return (
     <div className="container mx-auto p-4 md:p-8 max-w-4xl pt-12">
@@ -265,10 +186,7 @@ function ProfilePageComponent() {
                       <FormItem>
                         <FormLabel>{t.fullNameLabel}</FormLabel>
                         <FormControl>
-                          <div className="relative">
-                            <Input {...field} className="text-2xl font-bold font-headline pr-10" />
-                            {renderVoiceInput('name')}
-                          </div>
+                          <Input {...field} className="text-2xl font-bold font-headline" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -298,10 +216,7 @@ function ProfilePageComponent() {
                             <FormItem>
                                 <FormLabel>{t.companyNameLabel}</FormLabel>
                                 <FormControl>
-                                <div className="relative">
-                                  <Input {...field} disabled={!isEditing} className="pr-10" />
-                                  {renderVoiceInput('companyName')}
-                                </div>
+                                  <Input {...field} disabled={!isEditing} />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -323,10 +238,7 @@ function ProfilePageComponent() {
                             <FormItem>
                                 <FormLabel>{t.addressLabel}</FormLabel>
                                 <FormControl>
-                                <div className="relative">
-                                  <Input {...field} disabled={!isEditing} className="pr-10"/>
-                                  {renderVoiceInput('address')}
-                                </div>
+                                  <Input {...field} disabled={!isEditing} />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -339,10 +251,7 @@ function ProfilePageComponent() {
                             <FormItem>
                                 <FormLabel>{t.phoneLabel}</FormLabel>
                                 <FormControl>
-                                <div className="relative">
-                                  <Input {...field} disabled={!isEditing || isSetupMode} className="pr-10" />
-                                  {renderVoiceInput('phone')}
-                                </div>
+                                  <Input {...field} disabled={!isEditing || isSetupMode} />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
