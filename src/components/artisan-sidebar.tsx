@@ -20,6 +20,7 @@ import {
   LayoutDashboard,
   TrendingUp,
   BookOpen,
+  Clapperboard,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/icons';
@@ -295,6 +296,7 @@ export default function ArtisanSidebar({ closeSheet }: ArtisanSidebarProps) {
             { href: '/artisan/dashboard', icon: DollarSign, labelKey: 'revenue' },
             { href: '/artisan/orders', icon: Package, labelKey: 'orders' },
             { href: '/artisan/statistics', icon: BarChart, labelKey: 'statistics' },
+            { href: '/artisan/advertisement', icon: Clapperboard, labelKey: 'advertisement' },
             { href: '/artisan/sponsors', icon: HeartHandshake, labelKey: 'sponsors' },
         ]
     };
@@ -409,5 +411,7 @@ export default function ArtisanSidebar({ closeSheet }: ArtisanSidebarProps) {
         </div>
     );
 }
+
+    
 
     

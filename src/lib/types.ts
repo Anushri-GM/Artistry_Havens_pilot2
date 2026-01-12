@@ -1,4 +1,5 @@
 
+
 export type Product = {
   id: string;
   name: string;
@@ -29,6 +30,7 @@ export type Artisan = {
   };
   crafts?: string[];
   phone?: string;
+  categories?: string[];
 };
 
 export type Category = {
@@ -57,3 +59,5 @@ export type SavedCollection = {
     name: string;
     productIds: string[];
 }
+
+    
