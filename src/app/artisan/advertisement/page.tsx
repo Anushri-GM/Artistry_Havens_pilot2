@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Upload, Sparkles, Film, FileText, ChevronLeft, X } from 'lucide-react';
+import { Loader2, Upload, Sparkles, Film, FileText, ChevronLeft, X, Save } from 'lucide-react';
 import Image from 'next/image';
 import { generateAdvertisement } from '@/ai/flows/generate-advertisement';
 import { generateAdvertisementDescription } from '@/ai/flows/generate-advertisement-description';
@@ -17,6 +17,8 @@ import { useTranslation } from '@/context/translation-context';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
+import Link from 'next/link';
+import type { SavedAdvertisement } from '@/lib/types';
 
 interface ImageFile {
   name: string;
@@ -38,6 +40,7 @@ export default function AdvertisementPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [artisanName, setArtisanName] = useState('Artisan');
   const [artisanCategories, setArtisanCategories] = useState<string[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     const storedProfile = localStorage.getItem('artisanProfile');
@@ -150,7 +153,7 @@ export default function AdvertisementPage() {
 
       toast({
         title: 'Advertisement Generated!',
-        description: 'Your video is ready to be viewed below.',
+        description: 'Your video is ready to be viewed and saved below.',
       });
 
     } catch (err: any) {
@@ -175,6 +178,37 @@ export default function AdvertisementPage() {
     }
   }
 
+  const handleSaveAdvertisement = () => {
+    if (!generatedVideo) return;
+    setIsSaving(true);
+    
+    try {
+        const savedAds: SavedAdvertisement[] = JSON.parse(localStorage.getItem('savedAdvertisements') || '[]');
+        const newAd: SavedAdvertisement = {
+            id: `ad-${Date.now()}`,
+            videoUrl: generatedVideo.url,
+            description: advertisementPrompt,
+            createdAt: new Date().toISOString(),
+        };
+        savedAds.unshift(newAd);
+        localStorage.setItem('savedAdvertisements', JSON.stringify(savedAds));
+
+        toast({
+            title: 'Advertisement Saved!',
+            description: 'You can view it in your saved advertisements list.',
+        });
+    } catch (error) {
+        console.error('Error saving advertisement:', error);
+        toast({
+            variant: 'destructive',
+            title: 'Failed to Save',
+            description: 'Could not save the advertisement.',
+        });
+    } finally {
+        setIsSaving(false);
+    }
+  };
+
   return (
     <div className="container mx-auto p-4 md:p-8">
         <header className="flex items-center justify-between mb-4 mt-12">
@@ -185,6 +219,12 @@ export default function AdvertisementPage() {
             <h1 className="font-headline text-2xl md:text-3xl font-bold">Generate Advertisement</h1>
             <div className="w-10"></div>
         </header>
+
+        <div className="flex justify-end mb-4">
+            <Link href="/artisan/advertisement/history" passHref>
+                <Button variant="outline">View Advertisements</Button>
+            </Link>
+        </div>
 
       <Card className="w-full max-w-2xl mx-auto shadow-lg">
         <CardHeader>
@@ -261,7 +301,7 @@ export default function AdvertisementPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2"><Film className="h-5 w-5" />Generated Video</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
                     <div className="aspect-video w-full bg-muted rounded-lg overflow-hidden">
                         <video
                             key={generatedVideo.url}
@@ -275,6 +315,10 @@ export default function AdvertisementPage() {
                             Your browser does not support the video tag.
                         </video>
                     </div>
+                    <Button onClick={handleSaveAdvertisement} disabled={isSaving} className="w-full">
+                        {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                        {isSaving ? 'Saving...' : 'Save Advertisement'}
+                    </Button>
                 </CardContent>
               </Card>
             </div>

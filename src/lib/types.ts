@@ -60,4 +60,10 @@ export type SavedCollection = {
     productIds: string[];
 }
 
+export type SavedAdvertisement = {
+  id: string;
+  videoUrl: string;
+  description: string;
+  createdAt: string;
+};
     
