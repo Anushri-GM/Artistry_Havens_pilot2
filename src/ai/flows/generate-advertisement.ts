@@ -37,8 +37,8 @@ const generateAdvertisementFlow = ai.defineFlow(
         ...images.map(image => ({ media: { url: image.url, contentType: image.contentType } })),
     ];
     
-    // Asynchronous call to the video generation model
-    let { operation } = await ai.generate({
+    // Asynchronous call to the video generation model. Do NOT await.
+    let { operation } = ai.generate({
       model: googleAI.model('veo-3.0-generate-preview'),
       prompt: promptParts,
     });
