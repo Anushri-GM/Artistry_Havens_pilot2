@@ -1,7 +1,7 @@
 
 'use server';
 /**
- * @fileOverview Generates a video advertisement from product images.
+ * @fileOverview Generates a video advertisement from product images and a prompt.
  * - generateAdvertisement - A function that handles the video generation.
  */
 
@@ -30,16 +30,10 @@ const generateAdvertisementFlow = ai.defineFlow(
     inputSchema: GenerateAdvertisementInputSchema,
     outputSchema: GenerateAdvertisementOutputSchema,
   },
-  async ({ artisanName, productCategories, images }) => {
-
-    const promptText = `Create a short, elegant video advertisement (around 8 seconds) showcasing handmade crafts by an artisan named ${artisanName}. 
-    The video should feature these product categories: ${productCategories.join(', ')}. 
-    Use the provided images as inspiration, smoothly transitioning between them. 
-    The overall mood should be artistic, authentic, and high-quality, highlighting the craftsmanship.
-    Generate a video with sound.`;
+  async ({ prompt, images }) => {
 
     const promptParts = [
-        { text: promptText },
+        { text: prompt },
         ...images.map(image => ({ media: { url: image.url, contentType: image.contentType } })),
     ];
     
@@ -72,7 +66,7 @@ const generateAdvertisementFlow = ai.defineFlow(
 
     return {
       videoUrl: videoPart.media.url,
-      description: `A promotional video for ${artisanName}, highlighting crafts like ${productCategories.join(', ')}.`,
+      description: `A promotional video generated based on the provided images and prompt.`,
     };
   }
 );

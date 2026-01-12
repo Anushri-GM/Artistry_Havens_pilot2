@@ -3,8 +3,7 @@ import { z } from 'zod';
 
 // Define the input schema for the flow
 export const GenerateAdvertisementInputSchema = z.object({
-  artisanName: z.string().describe('The name of the artisan.'),
-  productCategories: z.array(z.string()).describe('A list of product categories the artisan specializes in.'),
+  prompt: z.string().describe('The detailed text prompt for the video generation.'),
   images: z
     .array(
       z.object({
@@ -24,3 +23,14 @@ export const GenerateAdvertisementOutputSchema = z.object({
   description: z.string().describe('A description of the generated video content.'),
 });
 export type GenerateAdvertisementOutput = z.infer<typeof GenerateAdvertisementOutputSchema>;
+
+export const GenerateAdvertisementDescriptionInputSchema = z.object({
+    artisanName: z.string().describe("The name of the artisan."),
+    productCategories: z.array(z.string()).describe("A list of product categories."),
+});
+export type GenerateAdvertisementDescriptionInput = z.infer<typeof GenerateAdvertisementDescriptionInputSchema>;
+
+export const GenerateAdvertisementDescriptionOutputSchema = z.object({
+    description: z.string().describe("The generated detailed prompt for video creation."),
+});
+export type GenerateAdvertisementDescriptionOutput = z.infer<typeof GenerateAdvertisementDescriptionOutputSchema>;

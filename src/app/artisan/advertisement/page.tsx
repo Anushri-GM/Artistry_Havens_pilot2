@@ -5,15 +5,18 @@ import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Upload, Sparkles, Film, FileText, ChevronLeft, X } from 'lucide-react';
 import Image from 'next/image';
 import { generateAdvertisement } from '@/ai/flows/generate-advertisement';
+import { generateAdvertisementDescription } from '@/ai/flows/generate-advertisement-description';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { artisans, productCategories } from '@/lib/data';
 import { useTranslation } from '@/context/translation-context';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import { Label } from '@/components/ui/label';
 
 interface ImageFile {
   name: string;
@@ -27,8 +30,10 @@ export default function AdvertisementPage() {
   const { translations } = useTranslation();
   
   const [imageFiles, setImageFiles] = useState<ImageFile[]>([]);
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [isGeneratingDesc, setIsGeneratingDesc] = useState(false);
+  const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
   const [generatedVideo, setGeneratedVideo] = useState<{ url: string; description: string } | null>(null);
+  const [advertisementPrompt, setAdvertisementPrompt] = useState('');
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [artisanName, setArtisanName] = useState('Artisan');
@@ -53,6 +58,11 @@ export default function AdvertisementPage() {
 
     if (imageFiles.length + files.length > 3) {
       setError('You can select a maximum of 3 photos.');
+      toast({
+        variant: 'destructive',
+        title: 'Upload Limit Exceeded',
+        description: 'You can only upload up to 3 images.',
+      });
       return;
     }
 
@@ -88,20 +98,48 @@ export default function AdvertisementPage() {
       });
   };
 
-  const handleGenerate = async () => {
+  const handleGenerateDescription = async () => {
+    setIsGeneratingDesc(true);
+    try {
+        const { description } = await generateAdvertisementDescription({
+            artisanName,
+            productCategories: artisanCategories
+        });
+        setAdvertisementPrompt(description);
+        toast({
+            title: "Description Generated!",
+            description: "Review the prompt and feel free to edit it."
+        });
+    } catch (err: any) {
+        console.error(err);
+        setError('Failed to generate description.');
+        toast({
+            variant: "destructive",
+            title: "Description Generation Failed",
+            description: err.message || "An unexpected error occurred."
+        });
+    } finally {
+        setIsGeneratingDesc(false);
+    }
+  }
+
+  const handleGenerateVideo = async () => {
     if (imageFiles.length === 0 || imageFiles.length > 3) {
       setError('Wrong number of photos uploaded. Please select between 1 and 3 photos.');
       return;
     }
+    if (!advertisementPrompt) {
+        setError('Please generate a description first.');
+        return;
+    }
 
-    setIsGenerating(true);
+    setIsGeneratingVideo(true);
     setGeneratedVideo(null);
     setError(null);
 
     try {
       const result = await generateAdvertisement({
-        artisanName,
-        productCategories: artisanCategories,
+        prompt: advertisementPrompt,
         images: imageFiles.map(img => ({ url: img.dataUrl, contentType: img.contentType })),
       });
       
@@ -124,7 +162,7 @@ export default function AdvertisementPage() {
         description: err.message || 'An unexpected error occurred.',
       });
     } finally {
-      setIsGenerating(false);
+      setIsGeneratingVideo(false);
     }
   };
   
@@ -158,7 +196,7 @@ export default function AdvertisementPage() {
               onClick={() => fileInputRef.current?.click()}
               variant="outline"
               className="w-full"
-              disabled={isGenerating || imageFiles.length >= 3}
+              disabled={isGeneratingVideo || imageFiles.length >= 3}
             >
               <Upload className="mr-2 h-4 w-4" />
               Upload Photos
@@ -196,20 +234,25 @@ export default function AdvertisementPage() {
             </Alert>
           )}
 
-          {generatedVideo && (
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><FileText className="h-5 w-5" />Video Description</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <p className="text-sm text-muted-foreground">{generatedVideo.description}</p>
-                </CardContent>
-            </Card>
-          )}
+          <div className="space-y-2">
+            <Label htmlFor="description-prompt">Advertisement Description</Label>
+            <Textarea
+              id="description-prompt"
+              placeholder="Generate a description or write your own..."
+              value={advertisementPrompt}
+              onChange={(e) => setAdvertisementPrompt(e.target.value)}
+              className="h-28"
+            />
+          </div>
 
-          <Button onClick={handleGenerate} disabled={isGenerating || imageFiles.length === 0} className="w-full">
-            {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-            {isGenerating ? 'Generating Video...' : 'Generate Advertisement'}
+          <Button onClick={handleGenerateDescription} disabled={isGeneratingDesc} className="w-full">
+            {isGeneratingDesc ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+            {isGeneratingDesc ? 'Generating Description...' : 'Generate Description'}
+          </Button>
+
+          <Button onClick={handleGenerateVideo} disabled={isGeneratingVideo || imageFiles.length === 0 || !advertisementPrompt} className="w-full">
+            {isGeneratingVideo ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Film className="mr-2 h-4 w-4" />}
+            {isGeneratingVideo ? 'Generating Video...' : 'Generate Advertisement'}
           </Button>
 
           {generatedVideo && (
