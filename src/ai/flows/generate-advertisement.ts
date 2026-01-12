@@ -33,10 +33,8 @@ const generateAdvertisementFlow = ai.defineFlow(
   async ({ prompt }) => {
 
     // Asynchronous call to the video generation model.
-    // The model will generate a video based on the descriptive text prompt.
-    // We are not passing the images directly to Veo here to avoid conflicting instructions.
     let { operation } = await ai.generate({
-      model: googleAI.model('veo-3.0-generate-preview'),
+      model: googleAI.model('veo-2.0-generate-001'),
       prompt: prompt,
     });
 
