@@ -6,11 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Upload, Sparkles, Film } from 'lucide-react';
+import { Loader2, Upload, Sparkles, Film, FileText, ChevronLeft } from 'lucide-react';
 import Image from 'next/image';
 import { generateAdvertisement } from '@/ai/flows/generate-advertisement';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { artisans, productCategories } from '@/lib/data';
+import { useTranslation } from '@/context/translation-context';
+import { useRouter } from 'next/navigation';
 
 interface ImageFile {
   name: string;
@@ -20,6 +22,9 @@ interface ImageFile {
 
 export default function AdvertisementPage() {
   const { toast } = useToast();
+  const router = useRouter();
+  const { translations } = useTranslation();
+  
   const [imageFiles, setImageFiles] = useState<ImageFile[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedVideo, setGeneratedVideo] = useState<{ url: string; description: string } | null>(null);
@@ -54,7 +59,8 @@ export default function AdvertisementPage() {
     }
 
     setError(null);
-    const newImageFiles: ImageFile[] = [];
+    setGeneratedVideo(null); // Clear previous results
+    
     const promises = Array.from(files).map(file => {
       return new Promise<ImageFile>((resolve, reject) => {
         const reader = new FileReader();
@@ -124,9 +130,17 @@ export default function AdvertisementPage() {
 
   return (
     <div className="container mx-auto p-4 md:p-8">
+        <header className="flex items-center justify-between mb-4 mt-12">
+            <Button onClick={() => router.back()} variant="ghost" size="icon">
+                <ChevronLeft className="h-6 w-6" />
+                <span className="sr-only">Back</span>
+            </Button>
+            <h1 className="font-headline text-2xl md:text-3xl font-bold">Generate Advertisement</h1>
+            <div className="w-10"></div>
+        </header>
+
       <Card className="w-full max-w-2xl mx-auto shadow-lg">
         <CardHeader>
-          <CardTitle className="font-headline text-2xl md:text-3xl">Generate Advertisement</CardTitle>
           <CardDescription>Upload 1 to 3 product photos to create a short video advertisement with AI.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -138,7 +152,7 @@ export default function AdvertisementPage() {
               disabled={isGenerating}
             >
               <Upload className="mr-2 h-4 w-4" />
-              Upload Photos
+              Upload Photos (1-3)
             </Button>
             <Input
               ref={fileInputRef}
@@ -174,6 +188,14 @@ export default function AdvertisementPage() {
 
           {generatedVideo && (
             <div className="space-y-4">
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2"><FileText className="h-5 w-5" />Video Description</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-sm text-muted-foreground">{generatedVideo.description}</p>
+                    </CardContent>
+                </Card>
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2"><Film className="h-5 w-5" />Generated Video</CardTitle>
@@ -192,14 +214,6 @@ export default function AdvertisementPage() {
                             Your browser does not support the video tag.
                         </video>
                     </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader>
-                    <CardTitle>Generated Description</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <p className="text-sm text-muted-foreground">{generatedVideo.description}</p>
                 </CardContent>
               </Card>
             </div>
