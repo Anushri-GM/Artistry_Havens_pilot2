@@ -39,8 +39,8 @@ const nextConfig: NextConfig = {
   },
   serverActions: {
     bodySizeLimit: '10mb',
-    // Increase timeout to 2 minutes for Veo model
-    maxDuration: 120,
+    // Increase timeout for Veo model
+    maxDuration: 45,
   }
 };
 
