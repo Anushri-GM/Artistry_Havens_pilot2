@@ -18,7 +18,7 @@ function ArtisanLayoutContent({ children }: { children: React.ReactNode }) {
   const isProfileSetupPage = pathname === '/artisan/profile' && searchParams.get('setup') === 'true';
   const showAddProductButton = !pathname.startsWith('/artisan/add-product') && !isProfileSetupPage;
 
-  if (noSidebarRoutes.includes(pathname)) {
+  if (noSidebarRoutes.includes(pathname) || isProfileSetupPage) {
     return <main className="h-full overflow-y-auto">{children}</main>;
   }
 
