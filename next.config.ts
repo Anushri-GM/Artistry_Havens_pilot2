@@ -39,12 +39,8 @@ const nextConfig: NextConfig = {
   },
   serverActions: {
     bodySizeLimit: '10mb',
-    // Increase timeout for slow AI operations like video generation
-    serverActions: {
-        bodySizeLimit: '10mb',
-        // Increase timeout to 2 minutes for Veo model
-        // VERCEL_FUNCTION_MAX_DURATION
-    },
+    // Increase timeout to 2 minutes for Veo model
+    maxDuration: 120,
   }
 };
 
