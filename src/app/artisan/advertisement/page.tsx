@@ -89,7 +89,7 @@ export default function AdvertisementPage() {
 
     Promise.all(newFilePromises)
       .then(newImages => {
-        setImageFiles(prev => [...prev, ...newImages]);
+        setImageFiles(prev => [...prev, ...newImages].slice(0, 3));
       })
       .catch(err => {
         console.error(err);
@@ -132,7 +132,7 @@ export default function AdvertisementPage() {
       return;
     }
     if (!advertisementPrompt) {
-        setError('Please generate a description first.');
+        setError('Please generate or write a description first.');
         return;
     }
 
@@ -216,7 +216,7 @@ export default function AdvertisementPage() {
                 <ChevronLeft className="h-6 w-6" />
                 <span className="sr-only">Back</span>
             </Button>
-            <h1 className="font-headline text-2xl md:text-3xl font-bold">Generate Advertisement</h1>
+            <h1 className="font-headline text-2xl md:text-3xl font-bold text-center">Generate Advertisement</h1>
             <div className="w-10"></div>
         </header>
 
@@ -239,7 +239,7 @@ export default function AdvertisementPage() {
               disabled={isGeneratingVideo || imageFiles.length >= 3}
             >
               <Upload className="mr-2 h-4 w-4" />
-              Upload Photos
+              Upload Photos ({imageFiles.length}/3)
             </Button>
             <Input
               ref={fileInputRef}
@@ -273,22 +273,29 @@ export default function AdvertisementPage() {
                 <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
+          
+          <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg"><FileText className="h-5 w-5" />Advertisement Description</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <div className="space-y-2">
+                    <Label htmlFor="description-prompt">Video Prompt</Label>
+                    <Textarea
+                    id="description-prompt"
+                    placeholder="Generate a description or write your own..."
+                    value={advertisementPrompt}
+                    onChange={(e) => setAdvertisementPrompt(e.target.value)}
+                    className="h-28"
+                    />
+                </div>
+                 <Button onClick={handleGenerateDescription} disabled={isGeneratingDesc} className="w-full">
+                    {isGeneratingDesc ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                    {isGeneratingDesc ? 'Generating Description...' : 'Generate Description'}
+                </Button>
+            </CardContent>
+          </Card>
 
-          <div className="space-y-2">
-            <Label htmlFor="description-prompt">Advertisement Description</Label>
-            <Textarea
-              id="description-prompt"
-              placeholder="Generate a description or write your own..."
-              value={advertisementPrompt}
-              onChange={(e) => setAdvertisementPrompt(e.target.value)}
-              className="h-28"
-            />
-          </div>
-
-          <Button onClick={handleGenerateDescription} disabled={isGeneratingDesc} className="w-full">
-            {isGeneratingDesc ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-            {isGeneratingDesc ? 'Generating Description...' : 'Generate Description'}
-          </Button>
 
           <Button onClick={handleGenerateVideo} disabled={isGeneratingVideo || imageFiles.length === 0 || !advertisementPrompt} className="w-full">
             {isGeneratingVideo ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Film className="mr-2 h-4 w-4" />}
