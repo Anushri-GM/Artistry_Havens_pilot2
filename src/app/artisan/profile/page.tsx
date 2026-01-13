@@ -16,6 +16,8 @@ import { artisans } from '@/lib/data';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { useTranslation } from '@/context/translation-context';
+import { useUser, useFirestore } from '@/firebase';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 
 const profileSchema = z.object({
@@ -37,6 +39,8 @@ function ProfilePageComponent() {
   const { toast } = useToast();
   const { translations } = useTranslation();
   const t = translations.profile_page;
+  const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
   
   const [artisan, setArtisan] = useState({
       ...artisans[0],
@@ -60,48 +64,79 @@ function ProfilePageComponent() {
   });
   
   useEffect(() => {
-    const storedProfile = localStorage.getItem('artisanProfile');
-    const tempPhone = isSetupMode ? localStorage.getItem('tempPhone') : null;
-    let data;
+    async function fetchProfile() {
+      if (user) {
+        const userRef = doc(firestore, 'users', user.uid);
+        const docSnap = await getDoc(userRef);
 
-    if (storedProfile) {
-        data = JSON.parse(storedProfile);
-        setArtisan(prev => ({...prev, ...data}));
-        if(data.avatarUrl) {
-            setImagePreview(data.avatarUrl);
+        let data;
+        if (docSnap.exists()) {
+            data = docSnap.data();
+            setArtisan(prev => ({...prev, ...data}));
+            if(data.avatarUrl) {
+                setImagePreview(data.avatarUrl);
+            }
+        } else {
+             data = {
+                name: artisan.name,
+                companyName: artisan.companyName,
+                address: artisan.address,
+                phone: user.phoneNumber || artisan.phone,
+            };
         }
-    } else {
-        data = {
-            name: artisan.name,
-            companyName: artisan.companyName,
-            address: artisan.address,
-            phone: tempPhone || artisan.phone,
-        };
+        form.reset(data);
+      }
     }
-    form.reset(data);
-  }, [form, artisan.name, artisan.companyName, artisan.address, artisan.phone, isSetupMode]);
+    
+    if (!isUserLoading) {
+      fetchProfile();
+    }
+  }, [user, isUserLoading, firestore, form, artisan.name, artisan.companyName, artisan.address, artisan.phone]);
 
 
-  const onSubmit = (data: ProfileFormValues) => {
+  const onSubmit = async (data: ProfileFormValues) => {
+    if (!user) {
+        toast({
+            variant: 'destructive',
+            title: 'Not Authenticated',
+            description: 'You must be logged in to update your profile.',
+        });
+        return;
+    }
     setIsLoading(true);
-    setTimeout(() => {
-      const profileData = {
-          ...data,
-          avatarUrl: imagePreview || artisan.avatar.url
-      }
-      setArtisan(prev => ({ ...prev, ...profileData }));
-      localStorage.setItem('artisanProfile', JSON.stringify(profileData));
-      setIsLoading(false);
-      setIsEditing(false);
-      toast({
-        title: t.profileUpdatedToast,
-        description: t.profileUpdatedToastDesc,
-      });
 
-      if (isSetupMode) {
-        router.push('/artisan/category-selection');
-      }
-    }, 1000);
+    try {
+        const userRef = doc(firestore, 'users', user.uid);
+        const profileData = {
+          name: data.name,
+          companyName: data.companyName,
+          address: data.address,
+          avatarUrl: imagePreview || artisan.avatar.url,
+          updatedAt: serverTimestamp(),
+        };
+
+        await setDoc(userRef, profileData, { merge: true });
+
+        setArtisan(prev => ({ ...prev, ...data, avatar: { url: profileData.avatarUrl, hint: prev.avatar.hint } }));
+        setIsEditing(false);
+        toast({
+            title: t.profileUpdatedToast,
+            description: t.profileUpdatedToastDesc,
+        });
+
+        if (isSetupMode) {
+            router.push('/artisan/category-selection');
+        }
+    } catch (error) {
+        console.error("Error updating profile:", error);
+        toast({
+            variant: 'destructive',
+            title: 'Update Failed',
+            description: 'There was an error saving your profile.',
+        });
+    } finally {
+        setIsLoading(false);
+    }
   };
   
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -130,6 +165,14 @@ function ProfilePageComponent() {
     return stars;
   };
 
+  if (isUserLoading) {
+      return (
+          <div className="flex items-center justify-center h-full">
+              <Loader2 className="h-8 w-8 animate-spin" />
+          </div>
+      )
+  }
+
   return (
     <div className="container mx-auto p-4 md:p-8 max-w-4xl pt-12">
         <div className="mb-4 flex justify-end items-center">
@@ -152,9 +195,9 @@ function ProfilePageComponent() {
           <Card>
             <CardHeader className="flex flex-col md:flex-row items-start gap-6">
               <div className="relative">
-                <Avatar className="h-20 w-20 border-4 border-primary">
+                <Avatar className="h-20 w-20 border-2 border-primary">
                   <AvatarImage src={imagePreview || artisan.avatar.url} alt={artisan.name} />
-                  <AvatarFallback>{artisan.name.charAt(0)}</AvatarFallback>
+                  <AvatarFallback>{form.getValues('name')?.charAt(0) || 'A'}</AvatarFallback>
                 </Avatar>
                 {isEditing && (
                     <>
@@ -193,7 +236,7 @@ function ProfilePageComponent() {
                     )}
                   />
                 ) : (
-                  <h2 className="font-headline text-3xl font-bold">{artisan.name}</h2>
+                  <h2 className="font-headline text-3xl font-bold">{form.getValues('name')}</h2>
                 )}
                 <div className="mt-2 flex items-center gap-2">
                   <div className="flex items-center">{renderStars(artisan.rating)}</div>
@@ -251,7 +294,7 @@ function ProfilePageComponent() {
                             <FormItem>
                                 <FormLabel>{t.phoneLabel}</FormLabel>
                                 <FormControl>
-                                  <Input {...field} disabled={!isEditing || isSetupMode} />
+                                  <Input {...field} disabled />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -262,7 +305,7 @@ function ProfilePageComponent() {
 
                 {isEditing && (
                 <div className="flex justify-end gap-2">
-                  {!isSetupMode && <Button variant="outline" onClick={() => {setIsEditing(false); form.reset({name: artisan.name, companyName: artisan.companyName, address: artisan.address, phone: artisan.phone}); setImagePreview(null);}}>{t.cancelButton}</Button>}
+                  {!isSetupMode && <Button type="button" variant="outline" onClick={() => {setIsEditing(false); form.reset({name: artisan.name, companyName: artisan.companyName, address: artisan.address, phone: artisan.phone}); setImagePreview(null);}}>{t.cancelButton}</Button>}
                   <Button type="submit" disabled={isLoading}>
                     {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                     {isSetupMode ? t.setupSaveButton : t.saveButton}
