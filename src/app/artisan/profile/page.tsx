@@ -106,7 +106,7 @@ function ProfilePageComponent() {
     setIsLoading(true);
 
     try {
-        const userRef = doc(firestore, 'users', user.uid);
+        const userDocRef = doc(firestore, "users", user.uid);
         const profileData = {
           name: data.name,
           companyName: data.companyName,
@@ -115,7 +115,7 @@ function ProfilePageComponent() {
           updatedAt: serverTimestamp(),
         };
 
-        await setDoc(userRef, profileData, { merge: true });
+        await setDoc(userDocRef, profileData, { merge: true });
 
         setArtisan(prev => ({ ...prev, ...data, avatar: { url: profileData.avatarUrl, hint: prev.avatar.hint } }));
         setIsEditing(false);
@@ -128,7 +128,7 @@ function ProfilePageComponent() {
             router.push('/artisan/category-selection');
         }
     } catch (error) {
-        console.error("Error updating profile:", error);
+        console.error("Error saving artisan profile to Firestore: ", error);
         toast({
             variant: 'destructive',
             title: 'Update Failed',
