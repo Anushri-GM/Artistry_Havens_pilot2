@@ -152,7 +152,7 @@ function ProfilePageComponent() {
           <Card>
             <CardHeader className="flex flex-col md:flex-row items-start gap-6">
               <div className="relative">
-                <Avatar className="h-24 w-24 border-4 border-primary">
+                <Avatar className="h-20 w-20 border-4 border-primary">
                   <AvatarImage src={imagePreview || artisan.avatar.url} alt={artisan.name} />
                   <AvatarFallback>{artisan.name.charAt(0)}</AvatarFallback>
                 </Avatar>
@@ -169,7 +169,7 @@ function ProfilePageComponent() {
                             type="button"
                             size="icon"
                             variant="secondary"
-                            className="absolute bottom-0 right-0 rounded-full h-8 w-8 border-2 border-background"
+                            className="absolute bottom-0 right-0 rounded-full h-7 w-7 border-2 border-background"
                             onClick={() => fileInputRef.current?.click()}
                         >
                             <Upload className="h-4 w-4" />
@@ -186,7 +186,7 @@ function ProfilePageComponent() {
                       <FormItem>
                         <FormLabel>{t.fullNameLabel}</FormLabel>
                         <FormControl>
-                          <Input {...field} className="text-2xl font-bold font-headline" />
+                          <Input {...field} className="text-xl font-bold font-headline" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
