@@ -138,31 +138,33 @@ export default function SponsorsPage() {
         <div className="space-y-4 pt-4">
           {sponsorRequests.map((request) => (
             <Card key={request.id}>
-              <CardHeader className="flex-row items-start gap-4 pb-4">
-                 <Avatar className="h-12 w-12">
+              <CardHeader className="flex flex-row items-center gap-4 pb-4">
+                <Avatar className="h-12 w-12">
                   <AvatarImage src={request.avatarUrl} alt={request.name} />
                   <AvatarFallback>{request.name.charAt(0)}</AvatarFallback>
                 </Avatar>
-                <div className="w-full">
-                    <CardTitle className="text-lg">{request.name}</CardTitle>
-                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm mt-1">
-                        <span className="font-medium">Offer:</span>
-                        <Badge variant="secondary">₹{request.monthlyContribution}/month</Badge>
-                        <Badge variant="secondary">{request.sharePercentage}% Revenue Share</Badge>
-                    </div>
+                <div className="flex-1">
+                  <CardTitle className="text-lg">{request.name}</CardTitle>
+                  <p className="text-sm text-muted-foreground italic">"{request.message}"</p>
                 </div>
               </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground italic">"{request.message}"</p>
+              <CardContent className="space-y-2">
+                <div>
+                  <h4 className="text-sm font-semibold mb-1">{t.offering}</h4>
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="secondary">₹{request.monthlyContribution}/month</Badge>
+                    <Badge variant="secondary">{request.sharePercentage}% Revenue Share</Badge>
+                  </div>
+                </div>
               </CardContent>
-              <CardContent className="flex flex-col gap-2">
+              <CardFooter className="flex gap-2">
                 <Button onClick={() => handleAccept(request.id)} className="w-full">
                   <Check className="mr-2 h-4 w-4" /> {t.acceptButton}
                 </Button>
                 <Button onClick={() => handleDecline(request.id)} variant="outline" className="w-full">
                   <X className="mr-2 h-4 w-4" /> {t.declineButton}
                 </Button>
-              </CardContent>
+              </CardFooter>
             </Card>
           ))}
         </div>
