@@ -9,9 +9,14 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // Users can create their own profile, and can only read/write their own profile. Admins can read/write any profile.
+    // Users can read their own profile. Admins can read/write any profile.
     match /users/{userId} {
-      allow read, write: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      // Allow read for own profile or if admin
+      allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      // Allow a user to create their own profile document
+      allow create: if request.auth != null && request.auth.uid == userId;
+      // Allow update/delete for own profile or if admin
+      allow update, delete: if request.auth != null && (request.auth.uid == userId || isAdmin());
     }
 
     // Messages can be read by sender/receiver. Only sender can create.
