@@ -17,8 +17,10 @@ import { Logo } from '@/components/icons';
 import Link from 'next/link';
 import { useTranslation } from '@/context/translation-context';
 import { useLanguage } from '@/context/language-context';
-import { signInWithPhoneNumber, type ConfirmationResult, RecaptchaVerifier } from 'firebase/auth';
-import { useAuth } from '@/firebase';
+import { signInWithPhoneNumber, type ConfirmationResult, RecaptchaVerifier, type User } from 'firebase/auth';
+import { useAuth, useFirestore } from '@/firebase';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+
 
 const formSchema = z.object({
   mobileNumber: z.string().regex(/^\d{10}$/, 'Please enter a valid 10-digit mobile number.'),
@@ -36,6 +38,7 @@ export default function ArtisanRegisterPage() {
   const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
   const recaptchaContainerRef = useRef<HTMLDivElement>(null);
   const auth = useAuth();
+  const firestore = useFirestore();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -100,6 +103,16 @@ export default function ArtisanRegisterPage() {
     }
   }, [auth, form, language, t.invalidNumber, t.otpSentToast, t.otpSentToastDesc, toast, t.errorSendingOtp]);
 
+  const saveUserData = async (user: User) => {
+    if (!firestore) return;
+    const userRef = doc(firestore, 'users', user.uid);
+    await setDoc(userRef, {
+        uid: user.uid,
+        phone: user.phoneNumber,
+        role: 'artisan',
+        createdAt: serverTimestamp(),
+    }, { merge: true });
+  }
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!otpSent || !values.otp || values.otp.length !== 6) {
@@ -107,6 +120,7 @@ export default function ArtisanRegisterPage() {
       return;
     }
 
+    setIsLoading(true);
     // Test number bypass
     if (values.mobileNumber === '8438610450' && values.otp === '123456') {
         toast({
@@ -114,21 +128,25 @@ export default function ArtisanRegisterPage() {
             description: t.accountCreatedDesc,
         });
         localStorage.setItem('tempPhone', values.mobileNumber);
+        setIsLoading(false);
         router.push('/artisan/profile?setup=true');
         return;
     }
 
     if (!confirmationResult) {
         toast({ variant: 'destructive', title: 'Error', description: 'OTP confirmation context is missing.' });
+        setIsLoading(false);
         return;
     }
 
-    setIsLoading(true);
     try {
       const result = await confirmationResult.confirm(values.otp);
       const user = result.user;
       
       const isNewUser = (user.metadata.creationTime === user.metadata.lastSignInTime);
+      
+      // Save user data to Firestore
+      await saveUserData(user);
 
       toast({
         title: isNewUser ? t.welcomeToast : t.welcomeBackToast,

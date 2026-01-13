@@ -17,7 +17,9 @@ import { Logo } from '@/components/icons';
 import Link from 'next/link';
 import { useTranslation } from '@/context/translation-context';
 import { useLanguage } from '@/context/language-context';
-import { getAuth, signInWithPhoneNumber, type ConfirmationResult, RecaptchaVerifier } from 'firebase/auth';
+import { getAuth, signInWithPhoneNumber, type ConfirmationResult, RecaptchaVerifier, type User } from 'firebase/auth';
+import { useFirestore } from '@/firebase';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 const formSchema = z.object({
   mobileNumber: z.string().regex(/^\d{10}$/, 'Please enter a valid 10-digit mobile number.'),
@@ -38,6 +40,7 @@ function AuthClientPageComponent() {
   const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
   const recaptchaContainerRef = useRef<HTMLDivElement>(null);
   const auth = getAuth();
+  const firestore = useFirestore();
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -90,6 +93,17 @@ function AuthClientPageComponent() {
     }
   }
 
+  const saveUserData = async (user: User) => {
+    if (!firestore) return;
+    const userRef = doc(firestore, 'users', user.uid);
+    await setDoc(userRef, {
+        uid: user.uid,
+        phone: user.phoneNumber,
+        role: userType,
+        createdAt: serverTimestamp(),
+    }, { merge: true });
+  }
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!otpSent || !values.otp || values.otp.length !== 6) {
       form.setError('otp', { message: 'OTP must be 6 digits.' });
@@ -103,7 +117,12 @@ function AuthClientPageComponent() {
 
     setIsLoading(true);
     try {
-        await confirmationResult.confirm(values.otp);
+        const result = await confirmationResult.confirm(values.otp);
+        const user = result.user;
+
+        // Save user data to Firestore
+        await saveUserData(user);
+
         toast({
             title: t.loginSuccessToast,
             description: t.loginSuccessToastDesc,
