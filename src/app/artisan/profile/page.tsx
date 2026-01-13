@@ -65,7 +65,7 @@ function ProfilePageComponent() {
   
   useEffect(() => {
     async function fetchProfile() {
-      if (user) {
+      if (user && firestore) {
         const userRef = doc(firestore, 'users', user.uid);
         const docSnap = await getDoc(userRef);
 
@@ -95,7 +95,7 @@ function ProfilePageComponent() {
 
 
   const onSubmit = async (data: ProfileFormValues) => {
-    if (!user) {
+    if (!user || !firestore) {
         toast({
             variant: 'destructive',
             title: 'Not Authenticated',
@@ -195,7 +195,7 @@ function ProfilePageComponent() {
           <Card>
             <CardHeader className="flex flex-col md:flex-row items-start gap-6">
               <div className="relative">
-                <Avatar className="h-20 w-20 border-2 border-primary">
+                <Avatar className="h-16 w-16 border-2 border-primary">
                   <AvatarImage src={imagePreview || artisan.avatar.url} alt={artisan.name} />
                   <AvatarFallback>{form.getValues('name')?.charAt(0) || 'A'}</AvatarFallback>
                 </Avatar>
@@ -236,7 +236,7 @@ function ProfilePageComponent() {
                     )}
                   />
                 ) : (
-                  <h2 className="font-headline text-3xl font-bold">{form.getValues('name')}</h2>
+                  <h2 className="font-headline text-2xl font-bold">{form.getValues('name')}</h2>
                 )}
                 <div className="mt-2 flex items-center gap-2">
                   <div className="flex items-center">{renderStars(artisan.rating)}</div>
