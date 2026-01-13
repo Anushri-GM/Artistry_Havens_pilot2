@@ -30,12 +30,26 @@ const generateAdvertisementFlow = ai.defineFlow(
     inputSchema: GenerateAdvertisementInputSchema,
     outputSchema: GenerateAdvertisementOutputSchema,
   },
-  async ({ prompt }) => {
+  async ({ prompt, images }) => {
+
+    const imageParts = images.map(image => ({
+        media: {
+            url: image.url,
+            contentType: image.contentType,
+        }
+    }));
 
     // Asynchronous call to the video generation model.
     let { operation } = await ai.generate({
-      model: googleAI.model('veo-2.0-generate-001'),
-      prompt: prompt,
+      model: googleAI.model('veo-3.0-generate-preview'),
+      prompt: [
+        { text: prompt },
+        ...imageParts,
+      ],
+      config: {
+        // As per documentation, videoLengthSeconds must be 8 when using referenceImages.
+        videoLengthSeconds: 8,
+      }
     });
 
     if (!operation) {
