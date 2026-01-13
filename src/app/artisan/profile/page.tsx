@@ -84,7 +84,14 @@ function ProfilePageComponent() {
                 phone: user.phoneNumber || artisan.phone,
             };
         }
-        form.reset(data);
+        
+        // Ensure that every field has a defined value to prevent uncontrolled -> controlled error
+        form.reset({
+            name: data.name || '',
+            companyName: data.companyName || '',
+            address: data.address || '',
+            phone: data.phone || user.phoneNumber || '',
+        });
       }
     }
     
