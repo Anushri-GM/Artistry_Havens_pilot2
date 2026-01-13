@@ -1,143 +1,89 @@
 
 {
   "entities": {
-    "Artisan": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Artisan",
+    "User": {
+      "title": "User",
       "type": "object",
-      "description": "Represents an artisan who creates and sells crafts.",
+      "description": "Represents a user of the application, who can be an artisan, buyer, or sponsor.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the artisan entity."
-        },
-        "mobileNumber": {
-          "type": "string",
-          "description": "Artisan's mobile phone number, used for authentication."
-        },
-        "aadharNumber": {
-          "type": "string",
-          "description": "Artisan's Aadhar number."
-        },
-        "profileDetails": {
-          "type": "string",
-          "description": "Artisan's profile details."
-        },
-        "craftIds": {
-          "type": "array",
-          "description": "References to Crafts. (Relationship: Artisan 1:N Craft)",
-          "items": {
-            "type": "string"
-          }
-        }
+        "displayName": { "type": "string", "description": "User's display name." },
+        "userType": { "type": "string", "description": "The type of user (artisan, buyer, or sponsor)." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of user creation." },
+        "email": { "type": "string", "description": "User's email address." },
+        "photoUrl": { "type": "string", "description": "URL of the user's profile picture." },
+        "bio": { "type": "string", "description": "A short biography of the user." },
+        "location": { "type": "string", "description": "User's location." },
+        "contactInfo": { "type": "string", "description": "User's contact information." }
       },
-      "required": [
-        "id",
-        "mobileNumber",
-        "aadharNumber",
-        "profileDetails"
-      ]
+      "required": ["displayName", "userType", "createdAt"]
     },
-    "Buyer": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Buyer",
+    "Product": {
+      "title": "Product",
       "type": "object",
-      "description": "Represents a buyer who purchases crafts.",
+      "description": "Represents a product listed by an artisan for sale.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the buyer entity."
-        },
-        "name": {
-          "type": "string",
-          "description": "Buyer's name."
-        },
-        "craftIds": {
-          "type": "array",
-          "description": "References to Crafts. (Relationship: Buyer 1:N Craft)",
-          "items": {
-            "type": "string"
-          }
-        }
+        "name": { "type": "string", "description": "The name of the product." },
+        "price": { "type": "number", "description": "The price of the product." },
+        "description": { "type": "string", "description": "A detailed description of the product." },
+        "mainImageUrl": { "type": "string", "description": "The main image URL for the product." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of product creation." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Timestamp of the last product update." },
+        "artisan": { "$ref": "#/entities/User", "description": "A reference to the artisan who created the product." },
+        "additionalImageUrls": { "type": "array", "items": { "type": "string" }, "description": "An array of additional image URLs for the product." },
+        "category": { "type": "string", "description": "The category the product belongs to." },
+        "materials": { "type": "string", "description": "Materials used to create the product." },
+        "dimensions": { "type": "string", "description": "Physical dimensions of the product." },
+        "availableQuantity": { "type": "integer", "description": "The quantity of the product available for sale." }
       },
-      "required": [
-        "id",
-        "name"
-      ]
+      "required": ["name", "price", "description", "mainImageUrl", "createdAt", "updatedAt"]
     },
-    "Sponsor": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Sponsor",
+    "CustomizationOption": {
+      "title": "CustomizationOption",
       "type": "object",
-      "description": "Represents a sponsor who supports artisans.",
+      "description": "Represents a customization option available for a product.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the sponsor entity."
-        },
-        "name": {
-          "type": "string",
-          "description": "Sponsor's name."
-        },
-        "artisanIds": {
-          "type": "array",
-          "description": "References to Artisans. (Relationship: Sponsor 1:N Artisan)",
-          "items": {
-            "type": "string"
-          }
-        }
+        "optionName": { "type": "string", "description": "The name of the customization option (e.g., 'Color', 'Size')." },
+        "optionType": { "type": "string", "description": "The type of input for the option (e.g., 'dropdown', 'text')." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of option creation." },
+        "product": { "$ref": "#/entities/Product", "description": "A reference to the product this option belongs to." },
+        "predefinedValues": { "type": "array", "items": { "type": "string" }, "description": "A list of predefined values for the option (e.g., ['Red', 'Blue', 'Green'])." },
+        "inputInstructions": { "type": "string", "description": "Instructions for the user on how to provide customization input." }
       },
-      "required": [
-        "id",
-        "name"
-      ]
+      "required": ["optionName", "optionType", "createdAt"]
     },
-    "Craft": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Craft",
+    "Order": {
+      "title": "Order",
       "type": "object",
-      "description": "Represents a craft created by an artisan.",
+      "description": "Represents a purchase order made by a buyer.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the craft entity."
-        },
-        "artisanId": {
-          "type": "string",
-          "description": "Reference to Artisan. (Relationship: Artisan 1:N Craft)"
-        },
-        "name": {
-          "type": "string",
-          "description": "Name of the craft."
-        },
-        "description": {
-          "type": "string",
-          "description": "Description of the craft, possibly AI-generated."
-        },
-        "category": {
-          "type": "string",
-          "description": "Category of the craft."
-        },
-        "price": {
-          "type": "number",
-          "description": "Price of the craft."
-        },
-        "buyerIds": {
-          "type": "array",
-          "description": "References to Buyers. (Relationship: Buyer N:N Craft)",
-          "items": {
-            "type": "string"
-          }
-        }
+        "orderDate": { "type": "string", "format": "date-time", "description": "The date the order was placed." },
+        "totalAmount": { "type": "number", "description": "The total amount of the order." },
+        "status": { "type": "string", "description": "The current status of the order (e.g., 'Processing', 'Shipped')." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of order creation." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Timestamp of the last order update." },
+        "buyer": { "$ref": "#/entities/User", "description": "A reference to the buyer who placed the order." },
+        "artisan": { "$ref": "#/entities/User", "description": "A reference to the artisan fulfilling the order." },
+        "product": { "$ref": "#/entities/Product", "description": "A reference to the product that was ordered." },
+        "shippingAddress": { "type": "string", "description": "The shipping address for the order." },
+        "paymentId": { "type": "string", "description": "The identifier for the payment transaction." },
+        "customizationDetails": { "type": "string", "description": "Details about any customizations requested for the product." }
       },
-      "required": [
-        "id",
-        "artisanId",
-        "name",
-        "description",
-        "category",
-        "price"
-      ]
+      "required": ["orderDate", "totalAmount", "status", "createdAt", "updatedAt"]
+    },
+    "Review": {
+      "title": "Review",
+      "type": "object",
+      "description": "Represents a review left by a buyer for a product.",
+      "properties": {
+        "rating": { "type": "integer", "description": "The numerical rating given (e.g., 1-5)." },
+        "reviewText": { "type": "string", "description": "The text content of the review." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of when the review was submitted." },
+        "buyer": { "$ref": "#/entities/User", "description": "A reference to the buyer who wrote the review." },
+        "product": { "$ref": "#/entities/Product", "description": "A reference to the product being reviewed." },
+        "artisan": { "$ref": "#/entities/User", "description": "A reference to the artisan of the product." },
+        "imageUrls": { "type": "array", "items": { "type": "string" }, "description": "An array of image URLs submitted with the review." }
+      },
+      "required": ["rating", "reviewText", "createdAt"]
     }
   },
   "auth": {
@@ -148,70 +94,41 @@
   "firestore": {
     "structure": [
       {
-        "path": "/artisans/{artisanId}",
+        "path": "/users/{userId}",
         "definition": {
-          "entityName": "Artisan",
-          "schema": {
-            "$ref": "#/backend/entities/Artisan"
-          },
-          "description": "Stores artisan profiles. Path-based ownership enforces that only the artisan can read/write their profile.",
-          "params": [
-            {
-              "name": "artisanId",
-              "description": "The unique identifier of the artisan."
-            }
-          ]
+          "schema": { "$ref": "#/entities/User" },
+          "description": "Stores user profiles. The userId matches the Firebase Auth UID."
         }
       },
       {
-        "path": "/buyers/{buyerId}",
+        "path": "/products/{productId}",
         "definition": {
-          "entityName": "Buyer",
-          "schema": {
-            "$ref": "#/backend/entities/Buyer"
-          },
-          "description": "Stores buyer profiles. Path-based ownership enforces that only the buyer can read/write their profile.",
-          "params": [
-            {
-              "name": "buyerId",
-              "description": "The unique identifier of the buyer."
-            }
-          ]
+          "schema": { "$ref": "#/entities/Product" },
+          "description": "Stores all products listed on the platform."
         }
       },
       {
-        "path": "/sponsors/{sponsorId}",
+        "path": "/products/{productId}/customizationOptions/{optionId}",
         "definition": {
-          "entityName": "Sponsor",
-          "schema": {
-            "$ref": "#/backend/entities/Sponsor"
-          },
-          "description": "Stores sponsor profiles. Path-based ownership enforces that only the sponsor can read/write their profile.",
-          "params": [
-            {
-              "name": "sponsorId",
-              "description": "The unique identifier of the sponsor."
-            }
-          ]
+          "schema": { "$ref": "#/entities/CustomizationOption" },
+          "description": "Stores customization options for a specific product."
         }
       },
       {
-        "path": "/crafts/{craftId}",
+        "path": "/orders/{orderId}",
         "definition": {
-          "entityName": "Craft",
-          "schema": {
-            "$ref": "#/backend/entities/Craft"
-          },
-          "description": "Stores craft details. Includes denormalized 'artisanId' for authorization independence.",
-          "params": [
-            {
-              "name": "craftId",
-              "description": "The unique identifier of the craft."
-            }
-          ]
+          "schema": { "$ref": "#/entities/Order" },
+          "description": "Stores all orders placed on the platform."
+        }
+      },
+      {
+        "path": "/reviews/{reviewId}",
+        "definition": {
+          "schema": { "$ref": "#/entities/Review" },
+          "description": "Stores all reviews for products."
         }
       }
     ],
-    "reasoning": "This Firestore data structure is designed to support the Artistry Havens application, focusing on artisans, buyers, and sponsors. It prioritizes authorization independence and clear security rules. User authentication will be handled by Firebase Authentication using phone number and OTP verification, as requested. Data segregation is applied to differentiate between artisans, buyers, and sponsors, each with their profiles and related data.\n\n*   **Authorization Independence:** Artisan-owned crafts denormalize the `artisanId` to enforce ownership-based access control without complex `get()` calls in security rules. Craft documents include the `artisanId`, enabling secure list operations scoped to the artisan. Buyer documents will include `craftIds` so we can directly find out who bought which crafts.\n\n*   **Structural Segregation:** Artisans, Buyers, and Sponsors have separate collections. Crafts are stored in a top-level collection to facilitate searching across artisans, but include the `artisanId` to link back to the owning artisan.\n\n*   **Access Modeling:** Private data (artisan profiles) uses path-based ownership (`/artisans/{artisanId}`). Crafts uses a top-level collection, but with the `artisanId` denormalized to maintain ownership invariants.\n\n*   **QAPs Support:** The structure supports QAPs by segregating data and using path-based ownership where applicable. List operations are secured by rules that can efficiently filter based on denormalized fields such as `artisanId` and `buyerIds` on the Craft documents.\n\n*   **Multilingual Support:** The design can accommodate multilingual support by adding fields to the Artisan, Buyer, Sponsor, and Craft documents for storing translations. The UI will handle the presentation of the appropriate language based on user preference.\n\n*   **AI Features:** The Artisan collection and the Craft collection are designed to easily be populated with AI-generated content. In addition, statistics will be handled via cloud functions that will compute the likes and bought quantities per month/week/year and store them in a summary table per artisan."
+    "reasoning": "This Firestore data structure is designed around the new schema. It uses top-level collections for major entities like Users, Products, Orders, and Reviews for easier querying. Customization options are nested under their respective products. User-specific data is keyed by the Firebase Auth UID to ensure a direct and secure link between authentication and user data."
   }
 }
