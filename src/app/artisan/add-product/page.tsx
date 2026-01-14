@@ -12,6 +12,8 @@ import { enhanceProductImage } from '@/ai/flows/enhance-product-image';
 import { productCategories as baseProductCategories, artisans } from '@/lib/data';
 import type { Product } from '@/lib/types';
 import ProductPreview from '@/components/product-preview';
+import { useUser, useFirestore } from '@/firebase';
+import { doc, setDoc, collection, serverTimestamp } from 'firebase/firestore';
 
 
 import { Button } from '@/components/ui/button';
@@ -46,6 +48,8 @@ export default function AddProductPage() {
   const { translations } = useTranslation();
   const { language } = useLanguage();
   const t = translations.add_product_page;
+  const { user } = useUser();
+  const firestore = useFirestore();
 
   const [isLoading, setIsLoading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -233,31 +237,38 @@ export default function AddProductPage() {
         });
         return;
     }
+     if (!user) {
+      toast({
+        variant: 'destructive',
+        title: 'Not Authenticated',
+        description: 'You must be logged in to create a product.',
+      });
+      return;
+    }
     setIsLoading(true);
 
     try {
         const compressedImageData = await compressImage(imageData);
-        const myProducts: Product[] = JSON.parse(localStorage.getItem('myArtisanProducts') || '[]');
         
-        const newProduct: Product = {
-            id: `prod-${Date.now()}`,
+        const productsRef = collection(firestore, 'products');
+        const newProdRef = doc(productsRef);
+
+        const newProduct = {
+            id: newProdRef.id,
+            artisanId: user.uid,
             name: values.productName,
-            artisan: artisans[0],
             price: values.price,
-            image: {
-                url: compressedImageData,
-                hint: 'custom product'
-            },
+            mainImageUrl: compressedImageData,
             category: values.productCategory,
             description: values.productDescription,
             story: values.productStory,
             likes: 0,
             sales: 0,
-            createdAt: new Date().toISOString(),
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
         };
         
-        myProducts.unshift(newProduct);
-        localStorage.setItem('myArtisanProducts', JSON.stringify(myProducts));
+        await setDoc(newProdRef, newProduct);
 
         toast({
             title: t.productSavedToast,
@@ -266,11 +277,11 @@ export default function AddProductPage() {
         router.push('/artisan/my-products');
 
     } catch (error) {
-        console.error('Error saving product:', error);
+        console.error('Error saving product to Firestore:', error);
         toast({
             variant: 'destructive',
             title: 'Failed to Save Product',
-            description: 'Could not save the product. The storage might be full.',
+            description: 'Could not save the product. Please check your connection and security rules.',
         });
     } finally {
         setIsLoading(false);
