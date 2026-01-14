@@ -1,4 +1,3 @@
-
 rules_version = '2';
 
 service cloud.firestore {
@@ -15,8 +14,10 @@ service cloud.firestore {
       allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
       // Allow a user to create their own profile document
       allow create: if request.auth != null && request.auth.uid == userId;
-      // Allow update/delete for own profile or if admin
-      allow update, delete: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      // Allow update for own profile or if admin. Disallow delete for non-admins.
+      allow update: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      // Only admins can delete user documents.
+      allow delete: if isAdmin();
     }
 
     // Messages can be read by sender/receiver. Only sender can create.
