@@ -40,7 +40,7 @@ import { useTranslation } from '@/context/translation-context';
 import { useLanguage } from '@/context/language-context';
 import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
 import { interpretNavCommand } from '@/ai/flows/interpret-navigation-command';
-import { useUser, useFirestore } from '@/firebase';
+import { useUser, useFirestore, useAuth } from '@/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 
