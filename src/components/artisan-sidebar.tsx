@@ -39,12 +39,11 @@ import {
 import { useTranslation } from '@/context/translation-context';
 import { useLanguage } from '@/context/language-context';
 import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
-import { artisans } from '@/lib/data';
 import { interpretNavCommand } from '@/ai/flows/interpret-navigation-command';
-import { getAuth, signOut } from 'firebase/auth';
+import { useUser, useFirestore } from '@/firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import { signOut } from 'firebase/auth';
 
-
-const defaultArtisan = artisans[0];
 
 interface Notification {
     id: string;
@@ -62,7 +61,7 @@ export function HeaderActions() {
     const { toast } = useToast();
     const t_notifications = translations.artisan_sidebar.notifications;
     const t_sidebar = translations.artisan_sidebar;
-    const auth = getAuth();
+    const auth = useAuth();
     
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const hasUnread = notifications.some(n => !n.read);
@@ -268,23 +267,38 @@ export default function ArtisanSidebar({ closeSheet }: ArtisanSidebarProps) {
     const { toast } = useToast();
     const { translations } = useTranslation();
     const t = translations.artisan_sidebar;
-    const auth = getAuth();
+    const { user, isUserLoading } = useUser();
+    const firestore = useFirestore();
+    const auth = useAuth();
     
-    const [artisanProfile, setArtisanProfile] = useState({
-      name: defaultArtisan.name,
-      avatar: defaultArtisan.avatar,
+    const [artisanProfile, setArtisanProfile] = useState<{name: string, avatarUrl: string | null}>({
+      name: 'Artisan',
+      avatarUrl: null,
     });
 
     useEffect(() => {
-        const storedProfile = localStorage.getItem('artisanProfile');
-        if (storedProfile) {
-            const profileData = JSON.parse(storedProfile);
-            setArtisanProfile(prev => ({
-                ...prev,
-                name: profileData.name || prev.name,
-            }));
+        async function fetchProfile() {
+            if (user && firestore) {
+                const userRef = doc(firestore, 'users', user.uid);
+                try {
+                    const docSnap = await getDoc(userRef);
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        setArtisanProfile({
+                            name: data.name || 'Artisan',
+                            avatarUrl: data.avatarUrl || null,
+                        });
+                    }
+                } catch (error) {
+                    console.error("Failed to fetch user profile for sidebar:", error);
+                }
+            }
         }
-    }, [pathname]); // Rerun on path change to catch updates
+        
+        if (!isUserLoading) {
+            fetchProfile();
+        }
+    }, [user, isUserLoading, firestore]);
 
     const baseNavItems = {
         studio: [
@@ -392,8 +406,8 @@ export default function ArtisanSidebar({ closeSheet }: ArtisanSidebarProps) {
                         <div className="flex items-center justify-between p-4">
                             <button onClick={() => handleLinkClick('/artisan/profile')} className="flex items-center gap-3 w-full">
                                 <Avatar className="h-9 w-9">
-                                    <AvatarImage src={artisanProfile.avatar.url} alt={artisanProfile.name} />
-                                    <AvatarFallback>{artisanProfile.name.charAt(0)}</AvatarFallback>
+                                    {artisanProfile.avatarUrl && <AvatarImage src={artisanProfile.avatarUrl} alt={artisanProfile.name} />}
+                                    <AvatarFallback>{artisanProfile.name.charAt(0).toUpperCase()}</AvatarFallback>
                                 </Avatar>
                                 <span className="text-sm font-medium truncate">{artisanProfile.name}</span>
                             </button>
@@ -411,7 +425,3 @@ export default function ArtisanSidebar({ closeSheet }: ArtisanSidebarProps) {
         </div>
     );
 }
-
-    
-
-    
