@@ -12,7 +12,6 @@ service cloud.firestore {
     // Users can read their own profile. Admins can read any profile.
     // A user can create their own profile.
     // A user can update their own profile, but cannot change their role. Admins can update any profile.
-    // Only admins can delete user documents.
     match /users/{userId} {
       allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
       allow create: if request.auth != null && request.auth.uid == userId;
@@ -29,7 +28,7 @@ service cloud.firestore {
       // Anyone can read a product
       allow read: if true;
       // Only an authenticated user can create a product, and they must be the artisan
-      allow create: if request.auth != null && get(request.resource.data.artisan).id == request.auth.uid;
+      allow create: if request.auth != null && request.resource.data.artisan == /databases/$(database)/documents/users/$(request.auth.uid);
       // The artisan who created the product can update or delete it, or an admin can.
       allow update, delete: if request.auth != null && (get(resource.data.artisan).id == request.auth.uid || isAdmin());
     }

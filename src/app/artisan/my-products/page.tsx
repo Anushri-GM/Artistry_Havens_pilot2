@@ -1,11 +1,11 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, MoreVertical, Edit, Trash2 } from 'lucide-react';
+import { PlusCircle, MoreVertical, Edit, Trash2, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import type { Product } from '@/lib/types';
 import { formatDistanceToNow } from 'date-fns';
@@ -28,23 +28,36 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import TutorialDialog from '@/components/tutorial-dialog';
+import { useUser, useFirestore, useCollection } from '@/firebase';
+import { collection, query, where, doc, deleteDoc, Timestamp } from 'firebase/firestore';
 
 export default function MyProductsPage() {
-  const [myProducts, setMyProducts] = useState<Product[]>([]);
   const { translations } = useTranslation();
   const t = translations.my_products_page;
   const { toast } = useToast();
+  const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
 
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
 
-  useEffect(() => {
-    const storedProducts = JSON.parse(localStorage.getItem('myArtisanProducts') || '[]');
-    setMyProducts(storedProducts);
-  }, []);
+  const productsQuery = useMemo(() => {
+    if (user && firestore) {
+      const productsRef = collection(firestore, 'products');
+      // Create a document reference to the user's document
+      const artisanRef = doc(firestore, `users/${user.uid}`);
+      // Query for products where the 'artisan' field matches the reference
+      return query(productsRef, where('artisan', '==', artisanRef));
+    }
+    return null;
+  }, [user, firestore]);
 
-  const formatTimeAgo = (date: string) => {
+  const { data: myProducts, isLoading: areProductsLoading } = useCollection<Product>(productsQuery);
+
+  const formatTimeAgo = (date: any) => {
     try {
-      const distance = formatDistanceToNow(new Date(date));
+      // Handle both Firebase Timestamp and string dates
+      const jsDate = date instanceof Timestamp ? date.toDate() : new Date(date);
+      const distance = formatDistanceToNow(jsDate);
       if (translations.add_product_page.cameraError.includes('Error')) { // A simple check for English
           return `Added ${distance} ago`;
       }
@@ -55,20 +68,31 @@ export default function MyProductsPage() {
     }
   }
 
-  const handleDeleteProduct = () => {
-    if (!productToDelete) return;
+  const handleDeleteProduct = async () => {
+    if (!productToDelete || !firestore) return;
 
-    const updatedProducts = myProducts.filter(p => p.id !== productToDelete.id);
-    setMyProducts(updatedProducts);
-    localStorage.setItem('myArtisanProducts', JSON.stringify(updatedProducts));
+    try {
+        const productRef = doc(firestore, 'products', productToDelete.id);
+        await deleteDoc(productRef);
 
-    toast({
-      title: t.deleteToastTitle,
-      description: t.deleteToastDescription.replace('{productName}', productToDelete.name),
-    });
+        toast({
+            title: t.deleteToastTitle,
+            description: t.deleteToastDescription.replace('{productName}', productToDelete.name),
+        });
+
+    } catch (error) {
+        console.error("Error deleting product:", error);
+        toast({
+            variant: 'destructive',
+            title: "Deletion Failed",
+            description: "Could not delete the product. Please try again.",
+        });
+    }
 
     setProductToDelete(null); // Close the dialog
   };
+
+  const isLoading = isUserLoading || areProductsLoading;
 
   return (
     <>
@@ -81,14 +105,18 @@ export default function MyProductsPage() {
           </div>
         </header>
 
-        {myProducts.length > 0 ? (
+        {isLoading ? (
+            <div className="flex justify-center items-center h-64">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+        ) : myProducts && myProducts.length > 0 ? (
           <div className="grid grid-cols-2 gap-4">
             {myProducts.map(product => (
               <Card key={product.id} className="overflow-hidden">
                 <CardContent className="p-0">
                   <div className="relative aspect-[3/4] w-full">
                     <Image
-                      src={product.image.url}
+                      src={product.mainImageUrl || product.image.url}
                       alt={product.name}
                       fill
                       className="object-cover"

@@ -3,8 +3,9 @@
 export type Product = {
   id: string;
   name: string;
-  artisan: Artisan;
+  artisan: any; // Can be a reference
   price: number;
+  mainImageUrl: string;
   image: {
     url: string;
     hint: string;
@@ -12,9 +13,9 @@ export type Product = {
   category: string;
   description: string;
   story?: string;
-  likes: number;
-  sales: number;
-  createdAt?: string; // Add this line
+  likes?: number;
+  sales?: number;
+  createdAt?: any; // Can be a server timestamp
   reviews?: {
       rating: number;
       count: number;
