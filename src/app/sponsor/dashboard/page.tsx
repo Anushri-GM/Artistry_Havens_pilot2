@@ -1,8 +1,8 @@
 
 'use client';
 
-import { products, categories as baseCategories } from "@/lib/data";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { products, categories as baseCategories, artisans } from "@/lib/data";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
@@ -10,6 +10,9 @@ import type { Product, Artisan, Category } from "@/lib/types";
 import { useState, useEffect } from 'react';
 import Link from "next/link";
 import { useTranslation } from "@/context/translation-context";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import Autoplay from "embla-carousel-autoplay";
 
 export default function SponsorDashboardPage() {
   const { toast } = useToast();
@@ -21,8 +24,17 @@ export default function SponsorDashboardPage() {
     name: translations.product_categories[index] || category.name,
   }));
 
-  const productsByCategory = (categoryName: string) => {
-    return products.filter(p => p.category === categoryName);
+  const featuredArtisans = artisans.slice(0, 5);
+
+  const artisansByCategory = (categoryName: string): Artisan[] => {
+    // Find all unique artisans for a given product category
+    const artisanIds = new Set<string>();
+    products.forEach(p => {
+        if (p.category === categoryName) {
+            artisanIds.add(p.artisan.id);
+        }
+    });
+    return artisans.filter(a => artisanIds.has(a.id));
   }
 
   return (
@@ -32,6 +44,47 @@ export default function SponsorDashboardPage() {
         <p className="text-md text-muted-foreground max-w-lg mx-auto">{t.description}</p>
       </header>
 
+      {/* Featured Artisans Carousel */}
+      <section className="mb-10">
+        <h2 className="font-headline text-2xl font-semibold mb-4 text-center">Featured Artisans</h2>
+        <Carousel
+            opts={{ align: 'start', loop: true }}
+            plugins={[Autoplay({ delay: 3000, stopOnInteraction: true })]}
+            className="w-full max-w-xs sm:max-w-sm mx-auto"
+        >
+            <CarouselContent className="-ml-4">
+                {featuredArtisans.map((artisan) => (
+                    <CarouselItem key={artisan.id} className="pl-4">
+                        <Link href={`/sponsor/product/${products.find(p => p.artisan.id === artisan.id)?.id || ''}`} passHref>
+                           <Card className="overflow-hidden">
+                                <div className="relative aspect-video">
+                                     <Image 
+                                        src={products.find(p => p.artisan.id === artisan.id)?.image.url || ''} 
+                                        alt={`${artisan.name}'s work`} 
+                                        fill 
+                                        className="object-cover"
+                                     />
+                                </div>
+                                <CardContent className="p-4 flex items-center gap-4">
+                                     <Avatar className="h-12 w-12 border-2 border-primary">
+                                         <AvatarImage src={artisan.avatar.url} alt={artisan.name} />
+                                         <AvatarFallback>{artisan.name.charAt(0)}</AvatarFallback>
+                                     </Avatar>
+                                     <div>
+                                         <p className="font-semibold">{artisan.name}</p>
+                                         <p className="text-xs text-muted-foreground">{artisan.crafts?.join(', ')}</p>
+                                     </div>
+                                </CardContent>
+                           </Card>
+                        </Link>
+                    </CarouselItem>
+                ))}
+            </CarouselContent>
+            <CarouselPrevious className="hidden sm:flex" />
+            <CarouselNext className="hidden sm:flex" />
+        </Carousel>
+      </section>
+
       <section className="my-10">
         <h2 className="font-headline text-2xl font-semibold mb-6 text-center">{t.discoverTitle}</h2>
         <div className="space-y-8">
@@ -39,40 +92,39 @@ export default function SponsorDashboardPage() {
             const originalCategory = baseCategories.find(c => c.id === category.id);
             if (!originalCategory) return null;
 
-            const categoryProducts = productsByCategory(originalCategory.name);
-            if (categoryProducts.length === 0) return null;
+            const categoryArtisans = artisansByCategory(originalCategory.name);
+            if (categoryArtisans.length === 0) return null;
 
             return (
               <div key={category.id}>
-                <h3 className="font-headline text-xl font-semibold mb-4">{category.name}</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {categoryProducts.map(product => (
-                    <Card key={product.id} className="overflow-hidden group">
-                      <CardContent className="p-0">
-                        <div className="relative aspect-square">
-                          <Image
-                            src={product.image.url}
-                            alt={product.name}
-                            fill
-                            className="object-cover transition-transform group-hover:scale-105"
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"/>
-                          <div className="absolute bottom-0 left-0 p-3">
-                            <h4 className="font-bold text-md text-white font-headline">{product.name}</h4>
-                            <p className="text-sm text-white/90">{t.by} {product.artisan.name}</p>
-                          </div>
-                        </div>
-                      </CardContent>
-                      <CardContent className="p-3">
-                        <p className="text-sm text-muted-foreground mb-3 h-10 overflow-hidden">
-                          {product.artisan.name} {t.specializesIn} {category.name}. {t.supportCraft}
-                        </p>
-                        <Link href={`/sponsor/product/${product.id}`} passHref>
-                          <Button className="w-full">{t.viewArtisanButton}</Button>
+                <h3 className="font-headline text-xl font-semibold mb-4 flex items-center gap-2"><category.icon className="h-5 w-5 text-primary" /> {category.name}</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-2 gap-4">
+                  {categoryArtisans.map(artisan => {
+                     const artisanProduct = products.find(p => p.artisan.id === artisan.id && p.category === originalCategory.name);
+                     if (!artisanProduct) return null;
+
+                     return(
+                        <Link href={`/sponsor/product/${artisanProduct.id}`} passHref key={artisan.id}>
+                            <Card className="overflow-hidden group h-full flex flex-col">
+                                <div className="relative aspect-[4/3] w-full">
+                                <Image
+                                    src={artisanProduct.image.url}
+                                    alt={artisanProduct.name}
+                                    fill
+                                    className="object-cover transition-transform group-hover:scale-105"
+                                />
+                                </div>
+                                <CardContent className="p-3 flex-1 flex flex-col justify-between">
+                                    <div>
+                                        <h4 className="font-bold text-sm text-foreground font-headline truncate">{artisan.name}</h4>
+                                        <p className="text-xs text-muted-foreground">{t.specializesIn} {category.name}</p>
+                                    </div>
+                                    <Button size="sm" variant="secondary" className="w-full mt-3">{t.viewArtisanButton}</Button>
+                                </CardContent>
+                            </Card>
                         </Link>
-                      </CardContent>
-                    </Card>
-                  ))}
+                     )
+                    })}
                 </div>
               </div>
             );
