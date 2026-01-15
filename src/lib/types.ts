@@ -9,6 +9,7 @@ export type Product = {
     url: string;
     hint: string;
   };
+  additionalImageUrls?: string[];
   category: string;
   description: string;
   story?: string;
@@ -18,7 +19,10 @@ export type Product = {
   reviews?: {
       rating: number;
       count: number;
-  }
+  },
+  materials?: string;
+  dimensions?: string;
+  availableQuantity?: number;
 };
 
 export type Artisan = {
@@ -66,4 +70,6 @@ export type SavedAdvertisement = {
   description: string;
   createdAt: string;
 };
+    
+
     
