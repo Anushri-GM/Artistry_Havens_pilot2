@@ -17,8 +17,8 @@ import { Logo } from '@/components/icons';
 import Link from 'next/link';
 import { useTranslation } from '@/context/translation-context';
 import { useLanguage } from '@/context/language-context';
-import { getAuth, signInWithPhoneNumber, type ConfirmationResult, RecaptchaVerifier, type User } from 'firebase/auth';
-import { useFirestore } from '@/firebase';
+import { signInWithPhoneNumber, type ConfirmationResult, RecaptchaVerifier, type User } from 'firebase/auth';
+import { useAuth, useFirestore } from '@/firebase';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 const formSchema = z.object({
@@ -39,7 +39,7 @@ function AuthClientPageComponent() {
   const [otpSent, setOtpSent] = useState(false);
   const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
   const recaptchaContainerRef = useRef<HTMLDivElement>(null);
-  const auth = getAuth();
+  const auth = useAuth();
   const firestore = useFirestore();
   
   const form = useForm<z.infer<typeof formSchema>>({
