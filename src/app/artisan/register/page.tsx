@@ -57,17 +57,6 @@ export default function ArtisanRegisterPage() {
       return;
     }
 
-    // Bypass for test number
-    if (mobileNumber === '8438610450') {
-        form.setValue('otp', '123456');
-        setOtpSent(true);
-        toast({
-            title: "Test OTP Entered",
-            description: "Using pre-filled test OTP for the test number.",
-        });
-        return;
-    }
-   
     setIsLoading(true);
     auth.languageCode = language;
     const phoneNumber = `+91${mobileNumber}`;
@@ -129,18 +118,7 @@ export default function ArtisanRegisterPage() {
     }
 
     setIsLoading(true);
-    // Test number bypass
-    if (values.mobileNumber === '8438610450' && values.otp === '123456') {
-        toast({
-            title: t.welcomeToast,
-            description: t.accountCreatedDesc,
-        });
-        localStorage.setItem('tempPhone', values.mobileNumber);
-        setIsLoading(false);
-        router.push('/artisan/profile?setup=true');
-        return;
-    }
-
+    
     if (!confirmationResult) {
         toast({ variant: 'destructive', title: 'Error', description: 'OTP confirmation context is missing.' });
         setIsLoading(false);
