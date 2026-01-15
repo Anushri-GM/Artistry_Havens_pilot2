@@ -46,7 +46,9 @@ export default function MyProductsPage() {
       // Create a document reference to the user's document
       const artisanRef = doc(firestore, `users/${user.uid}`);
       // Query for products where the 'artisan' field matches the reference
-      return query(productsRef, where('artisan', '==', artisanRef));
+      const q = query(productsRef, where('artisan', '==', artisanRef));
+      (q as any).__memo = true;
+      return q;
     }
     return null;
   }, [user, firestore]);
@@ -116,7 +118,7 @@ export default function MyProductsPage() {
                 <CardContent className="p-0">
                   <div className="relative aspect-[3/4] w-full">
                     <Image
-                      src={product.mainImageUrl || product.image.url}
+                      src={product.mainImageUrl || ''}
                       alt={product.name}
                       fill
                       className="object-cover"
