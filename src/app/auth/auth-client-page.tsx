@@ -120,6 +120,8 @@ function AuthClientPageComponent() {
         const result = await confirmationResult.confirm(values.otp);
         const user = result.user;
 
+        const isNewUser = (user.metadata.creationTime === user.metadata.lastSignInTime);
+
         // Save user data to Firestore
         await saveUserData(user);
 
@@ -127,8 +129,14 @@ function AuthClientPageComponent() {
             title: t.loginSuccessToast,
             description: t.loginSuccessToastDesc,
         });
-        const redirectPath = userType === 'buyer' ? '/buyer/home' : '/sponsor/dashboard';
-        router.push(redirectPath);
+
+        if (isNewUser) {
+            const redirectPath = userType === 'buyer' ? '/buyer/profile' : '/sponsor/profile';
+            router.push(`${redirectPath}?setup=true`);
+        } else {
+            const redirectPath = userType === 'buyer' ? '/buyer/home' : '/sponsor/dashboard';
+            router.push(redirectPath);
+        }
     } catch (error: any) {
         console.error("OTP Verification Error:", error);
         toast({
