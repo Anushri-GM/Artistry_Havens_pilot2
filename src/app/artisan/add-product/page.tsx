@@ -55,19 +55,19 @@ export default function AddProductPage() {
   const firestore = useFirestore();
 
   const [isLoading, setIsLoading] = useState(false);
-  const [isGenerating, setIsGenerating = useState(false);
-  const [isEnhancing, setIsEnhancing = useState(false);
-  const [mainImagePreview, setMainImagePreview = useState<string | null>(null);
-  const [mainImageData, setMainImageData = useState<string | null>(null);
-  const [additionalImages, setAdditionalImages = useState<string[]>([]);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isEnhancing, setIsEnhancing] = useState(false);
+  const [mainImagePreview, setMainImagePreview] = useState<string | null>(null);
+  const [mainImageData, setMainImageData] = useState<string | null>(null);
+  const [additionalImages, setAdditionalImages] = useState<string[]>([]);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [useCamera, setUseCamera = useState(false);
-  const [hasCameraPermission, setHasCameraPermission = useState<boolean | null>(null);
-  const [stream, setStream = useState<MediaStream | null>(null);
+  const [useCamera, setUseCamera] = useState(false);
+  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+  const [stream, setStream] = useState<MediaStream | null>(null);
   const mainFileInputRef = useRef<HTMLInputElement>(null);
   const additionalFileInputRef = useRef<HTMLInputElement>(null);
-  const [previewProduct, setPreviewProduct = useState<Product | null>(null);
+  const [previewProduct, setPreviewProduct] = useState<Product | null>(null);
 
 
   const form = useForm<z.infer<typeof formSchema>>({
