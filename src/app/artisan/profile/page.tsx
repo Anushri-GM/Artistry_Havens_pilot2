@@ -77,11 +77,13 @@ function ProfilePageComponent() {
                 setImagePreview(data.avatarUrl);
             }
         } else {
+             // This case is for a new user in setup mode whose document might not exist yet.
+             // We'll prepare default data.
              data = {
-                name: artisan.name,
-                companyName: artisan.companyName,
-                address: artisan.address,
-                phone: user.phoneNumber || artisan.phone,
+                name: '',
+                companyName: '',
+                address: '',
+                phone: user.phoneNumber || '',
             };
         }
         
@@ -98,7 +100,7 @@ function ProfilePageComponent() {
     if (!isUserLoading) {
       fetchProfile();
     }
-  }, [user, isUserLoading, firestore, form, artisan.name, artisan.companyName, artisan.address, artisan.phone]);
+  }, [user, isUserLoading, firestore, form]);
 
 
   const onSubmit = async (data: ProfileFormValues) => {
