@@ -19,7 +19,7 @@ import { useTranslation } from '@/context/translation-context';
 import { useLanguage } from '@/context/language-context';
 import { signInWithPhoneNumber, type ConfirmationResult, RecaptchaVerifier, type User } from 'firebase/auth';
 import { useAuth, useFirestore } from '@/firebase';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 
 
 const formSchema = z.object({
@@ -114,6 +114,14 @@ export default function ArtisanRegisterPage() {
     }, { merge: true });
   }
 
+  const isNewUser = async (user: User) => {
+    if (!firestore) return true; // Assume new if firestore isn't available
+    const userRef = doc(firestore, "users", user.uid);
+    const docSnap = await getDoc(userRef);
+    return !docSnap.exists();
+  }
+
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!otpSent || !values.otp || values.otp.length !== 6) {
       form.setError('otp', { message: 'OTP must be 6 digits.' });
@@ -143,17 +151,18 @@ export default function ArtisanRegisterPage() {
       const result = await confirmationResult.confirm(values.otp);
       const user = result.user;
       
-      const isNewUser = (user.metadata.creationTime === user.metadata.lastSignInTime);
+      const isNew = await isNewUser(user);
       
-      // Save user data to Firestore
-      await saveUserData(user);
+      if (isNew) {
+        await saveUserData(user);
+      }
 
       toast({
-        title: isNewUser ? t.welcomeToast : t.welcomeBackToast,
-        description: isNewUser ? t.accountCreatedDesc : t.welcomeBackToastDesc,
+        title: isNew ? t.welcomeToast : t.welcomeBackToast,
+        description: isNew ? t.accountCreatedDesc : t.welcomeBackToastDesc,
       });
       
-      if (isNewUser) {
+      if (isNew) {
         localStorage.setItem('tempPhone', values.mobileNumber);
         router.push('/artisan/profile?setup=true');
       } else {

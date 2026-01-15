@@ -19,7 +19,7 @@ import { useTranslation } from '@/context/translation-context';
 import { useLanguage } from '@/context/language-context';
 import { signInWithPhoneNumber, type ConfirmationResult, RecaptchaVerifier, type User } from 'firebase/auth';
 import { useAuth, useFirestore } from '@/firebase';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 
 const formSchema = z.object({
   mobileNumber: z.string().regex(/^\d{10}$/, 'Please enter a valid 10-digit mobile number.'),
@@ -104,6 +104,16 @@ function AuthClientPageComponent() {
     }, { merge: true });
   }
 
+  const isNewUser = async (user: User) => {
+    if (!firestore) return true;
+    const userRef = doc(firestore, "users", user.uid);
+    const docSnap = await getDoc(userRef);
+    // If the document doesn't exist, it's a new user in our system.
+    // Firebase auth's metadata can be misleading if the user exists but the Firestore doc was deleted.
+    return !docSnap.exists();
+  }
+
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!otpSent || !values.otp || values.otp.length !== 6) {
       form.setError('otp', { message: 'OTP must be 6 digits.' });
@@ -119,18 +129,19 @@ function AuthClientPageComponent() {
     try {
         const result = await confirmationResult.confirm(values.otp);
         const user = result.user;
+        
+        const isNew = await isNewUser(user);
 
-        const isNewUser = (user.metadata.creationTime === user.metadata.lastSignInTime);
-
-        // Save user data to Firestore
-        await saveUserData(user);
+        if (isNew) {
+            await saveUserData(user);
+        }
 
         toast({
-            title: t.loginSuccessToast,
-            description: t.loginSuccessToastDesc,
+            title: isNew ? t.loginSuccessToast : t.welcomeBackToast,
+            description: isNew ? t.accountCreatedDesc : t.welcomeBackToastDesc,
         });
 
-        if (isNewUser) {
+        if (isNew) {
             const redirectPath = userType === 'buyer' ? '/buyer/profile' : '/sponsor/profile';
             router.push(`${redirectPath}?setup=true`);
         } else {
