@@ -238,7 +238,7 @@ export default function AddProductPage() {
         });
         return;
     }
-     if (!user) {
+     if (!user || !firestore) {
       toast({
         variant: 'destructive',
         title: 'Not Authenticated',
@@ -256,7 +256,7 @@ export default function AddProductPage() {
 
         const newProduct = {
             id: newProdRef.id,
-            artisanId: user.uid,
+            artisan: doc(firestore, 'users', user.uid),
             name: values.productName,
             price: values.price,
             mainImageUrl: compressedMainImage,

@@ -25,6 +25,7 @@
         "name": { "type": "string", "description": "The name of the product." },
         "price": { "type": "number", "description": "The price of the product." },
         "description": { "type": "string", "description": "A detailed description of the product." },
+        "story": { "type": "string", "description": "A short, engaging story about the product." },
         "mainImageUrl": { "type": "string", "description": "The main image URL for the product." },
         "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of product creation." },
         "updatedAt": { "type": "string", "format": "date-time", "description": "Timestamp of the last product update." },
