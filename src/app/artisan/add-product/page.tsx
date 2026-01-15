@@ -26,7 +26,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Upload, Camera, Sparkles, ChevronLeft, Eye, Wand2, X } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogClose } from '@/components/ui/dialog';
-import ProductCard from '@/components/product-card';
 import { useTranslation } from '@/context/translation-context';
 import { useLanguage } from '@/context/language-context';
 import TutorialDialog from '@/components/tutorial-dialog';
@@ -40,8 +39,6 @@ const formSchema = z.object({
   productDescription: z.string().min(10, 'Product description is required.'),
   productStory: z.string().min(10, 'Product story is required.'),
   price: z.coerce.number().min(0, 'Price must be a positive number.'),
-  materials: z.string().min(3, 'Materials are required.'),
-  dimensions: z.string().min(3, 'Dimensions are required.'),
   availableQuantity: z.coerce.number().int().min(0, 'Quantity must be a whole number.'),
 });
 
@@ -59,14 +56,12 @@ export default function AddProductPage() {
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [mainImagePreview, setMainImagePreview] = useState<string | null>(null);
   const [mainImageData, setMainImageData] = useState<string | null>(null);
-  const [additionalImages, setAdditionalImages] = useState<string[]>([]);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [useCamera, setUseCamera] = useState(false);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const mainFileInputRef = useRef<HTMLInputElement>(null);
-  const additionalFileInputRef = useRef<HTMLInputElement>(null);
   const [previewProduct, setPreviewProduct] = useState<Product | null>(null);
 
 
@@ -78,8 +73,6 @@ export default function AddProductPage() {
       productDescription: '',
       productStory: '',
       price: 0,
-      materials: '',
-      dimensions: '',
       availableQuantity: 1,
     },
   });
@@ -135,39 +128,6 @@ export default function AddProductPage() {
       reader.readAsDataURL(file);
     }
   };
-
-  const handleAdditionalImagesChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (files) {
-      const currentImageCount = additionalImages.length;
-      const filesArray = Array.from(files);
-      const remainingSlots = 3 - currentImageCount;
-
-      if (filesArray.length > remainingSlots) {
-        toast({
-            variant: "destructive",
-            title: "Image Limit Exceeded",
-            description: `You can only upload ${remainingSlots} more image(s).`,
-        });
-      }
-
-      const newImagePromises = filesArray.slice(0, remainingSlots).map(file => {
-          return new Promise<string>((resolve) => {
-              const reader = new FileReader();
-              reader.onload = (e) => resolve(e.target?.result as string);
-              reader.readAsDataURL(file);
-          });
-      });
-
-      Promise.all(newImagePromises).then(newImages => {
-          setAdditionalImages(prev => [...prev, ...newImages]);
-      });
-    }
-  };
-
-  const removeAdditionalImage = (index: number) => {
-    setAdditionalImages(prev => prev.filter((_, i) => i !== index));
-  }
   
   const stopCamera = () => {
     if (stream) {
@@ -290,7 +250,6 @@ export default function AddProductPage() {
 
     try {
         const compressedMainImage = await compressImage(mainImageData);
-        const compressedAdditionalImages = await Promise.all(additionalImages.map(img => compressImage(img)));
         
         const productsRef = collection(firestore, 'products');
         const newProdRef = doc(productsRef);
@@ -301,12 +260,9 @@ export default function AddProductPage() {
             name: values.productName,
             price: values.price,
             mainImageUrl: compressedMainImage,
-            additionalImageUrls: compressedAdditionalImages,
             category: values.productCategory,
             description: values.productDescription,
             story: values.productStory,
-            materials: values.materials,
-            dimensions: values.dimensions,
             availableQuantity: values.availableQuantity,
             likes: 0,
             sales: 0,
@@ -474,49 +430,6 @@ export default function AddProductPage() {
                                 )}
                             </FormItem>
 
-                            {/* Additional Images Section */}
-                            <FormItem>
-                                <FormLabel>Additional Images (up to 3)</FormLabel>
-                                <div className="grid grid-cols-3 gap-2">
-                                    {additionalImages.map((image, index) => (
-                                        <div key={index} className="relative aspect-square">
-                                            <Image src={image} alt={`Additional image ${index + 1}`} fill className="object-cover rounded-md" />
-                                            <Button
-                                                type="button"
-                                                variant="destructive"
-                                                size="icon"
-                                                className="absolute top-1 right-1 h-6 w-6 rounded-full"
-                                                onClick={() => removeAdditionalImage(index)}
-                                            >
-                                                <X className="h-4 w-4" />
-                                            </Button>
-                                        </div>
-                                    ))}
-                                </div>
-                                {additionalImages.length < 3 && (
-                                    <>
-                                    <Input
-                                        id="additional-images-input"
-                                        type="file"
-                                        multiple
-                                        accept="image/*"
-                                        className="hidden"
-                                        ref={additionalFileInputRef}
-                                        onChange={handleAdditionalImagesChange}
-                                    />
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        className="w-full"
-                                        onClick={() => additionalFileInputRef.current?.click()}
-                                    >
-                                        <Upload className="mr-2 h-4 w-4" />
-                                        Add More Images ({additionalImages.length}/3)
-                                    </Button>
-                                    </>
-                                )}
-                            </FormItem>
-
                             <Button onClick={handleGenerateDetails} disabled={isGenerating || !mainImageData} className="w-full" type="button">
                                 {isGenerating ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{t.generatingDetailsButton}</> : <><Sparkles className="mr-2 h-4 w-4" />{t.generateDetailsButton}</>}
                             </Button>
@@ -561,20 +474,6 @@ export default function AddProductPage() {
                             <FormItem>
                                 <FormLabel>{t.productStoryLabel}</FormLabel>
                                 <FormControl><Textarea {...field} className="h-24" /></FormControl>
-                                <FormMessage />
-                            </FormItem>
-                            )}/>
-                             <FormField control={form.control} name="materials" render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Materials</FormLabel>
-                                <FormControl><Input {...field} placeholder="e.g., Clay, Natural Dyes, Cotton" /></FormControl>
-                                <FormMessage />
-                            </FormItem>
-                            )}/>
-                             <FormField control={form.control} name="dimensions" render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Dimensions</FormLabel>
-                                <FormControl><Input {...field} placeholder="e.g., 12cm x 10cm x 10cm" /></FormControl>
                                 <FormMessage />
                             </FormItem>
                             )}/>
@@ -643,5 +542,3 @@ export default function AddProductPage() {
     </div>
   );
 }
-
-    

@@ -29,10 +29,7 @@
         "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of product creation." },
         "updatedAt": { "type": "string", "format": "date-time", "description": "Timestamp of the last product update." },
         "artisan": { "$ref": "#/entities/User", "description": "A reference to the artisan who created the product." },
-        "additionalImageUrls": { "type": "array", "items": { "type": "string" }, "description": "An array of additional image URLs for the product." },
         "category": { "type": "string", "description": "The category the product belongs to." },
-        "materials": { "type": "string", "description": "Materials used to create the product." },
-        "dimensions": { "type": "string", "description": "Physical dimensions of the product." },
         "availableQuantity": { "type": "integer", "description": "The quantity of the product available for sale." }
       },
       "required": ["name", "price", "description", "mainImageUrl", "createdAt", "updatedAt"]

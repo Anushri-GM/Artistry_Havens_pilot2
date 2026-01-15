@@ -9,7 +9,6 @@ export type Product = {
     url: string;
     hint: string;
   };
-  additionalImageUrls?: string[];
   category: string;
   description: string;
   story?: string;
@@ -20,8 +19,6 @@ export type Product = {
       rating: number;
       count: number;
   },
-  materials?: string;
-  dimensions?: string;
   availableQuantity?: number;
 };
 
