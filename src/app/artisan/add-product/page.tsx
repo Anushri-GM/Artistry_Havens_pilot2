@@ -255,8 +255,6 @@ export default function AddProductPage() {
         const newProdRef = doc(productsRef);
 
         const newProduct = {
-            id: newProdRef.id,
-            artisan: doc(firestore, 'users', user.uid),
             name: values.productName,
             price: values.price,
             mainImageUrl: compressedMainImage,
@@ -264,8 +262,7 @@ export default function AddProductPage() {
             description: values.productDescription,
             story: values.productStory,
             availableQuantity: values.availableQuantity,
-            likes: 0,
-            sales: 0,
+            artisan: doc(firestore, 'users', user.uid),
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
         };

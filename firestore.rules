@@ -29,9 +29,9 @@ service cloud.firestore {
       // Anyone can read a product
       allow read: if true;
       // Only an authenticated user can create a product, and they must be the artisan
-      allow create: if request.auth != null && request.resource.data.artisanId == request.auth.uid;
+      allow create: if request.auth != null && get(request.resource.data.artisan).id == request.auth.uid;
       // The artisan who created the product can update or delete it, or an admin can.
-      allow update, delete: if request.auth != null && (resource.data.artisanId == request.auth.uid || isAdmin());
+      allow update, delete: if request.auth != null && (get(resource.data.artisan).id == request.auth.uid || isAdmin());
     }
 
     // Messages can be read by sender/receiver. Only sender can create.
