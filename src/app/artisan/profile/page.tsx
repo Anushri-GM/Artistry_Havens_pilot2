@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, Suspense, useRef } from 'react';
@@ -269,30 +268,33 @@ function ProfilePageComponent() {
             <CardContent className="space-y-8">
                 <Separator />
                 
-                 <div>
-                    <h3 className="font-headline text-xl font-semibold mb-1">My Crafts</h3>
-                    {isEditing ? (
-                        <>
-                            <p className="text-sm text-muted-foreground mb-4">Change which crafts you specialize in.</p>
-                            <Button type="button" variant="outline" onClick={() => router.push('/artisan/category-selection')}>
-                                <Edit className="mr-2 h-4 w-4" />
-                                Edit Craft Categories
-                            </Button>
-                        </>
-                    ) : (
-                        <div className="flex flex-wrap gap-2 mt-2">
-                            {selectedCategoryDetails.length > 0 ? (
-                                selectedCategoryDetails.map(cat => cat && (
-                                    <Badge key={cat.id} variant="secondary" className="text-base py-1 px-3">{cat.name}</Badge>
-                                ))
+                {!isSetupMode && (
+                    <>
+                        <div>
+                            <h3 className="font-headline text-xl font-semibold mb-1">My Crafts</h3>
+                            {isEditing ? (
+                                <>
+                                    <p className="text-sm text-muted-foreground mb-4">Change which crafts you specialize in.</p>
+                                    <Button type="button" variant="outline" onClick={() => router.push('/artisan/category-selection')}>
+                                        <Edit className="mr-2 h-4 w-4" />
+                                        Edit Craft Categories
+                                    </Button>
+                                </>
                             ) : (
-                                <p className="text-sm text-muted-foreground">No crafts selected yet.</p>
+                                <div className="flex flex-wrap gap-2 mt-2">
+                                    {selectedCategoryDetails.length > 0 ? (
+                                        selectedCategoryDetails.map(cat => cat && (
+                                            <Badge key={cat.id} variant="secondary" className="text-base py-1 px-3">{cat.name}</Badge>
+                                        ))
+                                    ) : (
+                                        <p className="text-sm text-muted-foreground">No crafts selected yet.</p>
+                                    )}
+                                </div>
                             )}
                         </div>
-                    )}
-                </div>
-                
-                <Separator />
+                        <Separator />
+                    </>
+                )}
                 
                 <div>
                     <h3 className="font-headline text-xl font-semibold">{t.professionalDetailsTitle}</h3>
