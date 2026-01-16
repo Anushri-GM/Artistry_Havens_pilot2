@@ -97,10 +97,12 @@
         "referenceImageUrl": { "type": "string", "description": "The optional data URI of the user-uploaded reference image." },
         "generatedImageUrl": { "type": "string", "description": "The data URI of the AI-generated image showing the requested changes." },
         "description": { "type": "string", "description": "The buyer's description of the requested changes." },
+        "category": { "type": "string", "description": "The ID of the craft category for the request." },
         "status": { "type": "string", "description": "The status of the request (e.g., 'pending', 'accepted', 'rejected')." },
-        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of request creation." }
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of request creation." },
+        "artisanId": { "type": "string", "description": "The UID of the artisan who accepted the request." }
       },
-      "required": ["buyerId", "generatedImageUrl", "description", "createdAt"]
+      "required": ["buyerId", "generatedImageUrl", "description", "category", "createdAt"]
     }
   },
   "auth": {
@@ -146,10 +148,10 @@
         }
       },
       {
-        "path": "/customizationRequests/{requestId}",
+        "path": "/CustomizationRequest/{requestId}",
         "definition": {
           "schema": { "$ref": "#/entities/CustomizationRequest" },
-          "description": "Stores custom design requests made by buyers using a reference image."
+          "description": "Stores custom design requests from buyers. Artisans in the specified category can view and accept these requests."
         }
       }
     ],

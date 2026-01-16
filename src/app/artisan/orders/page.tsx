@@ -53,7 +53,7 @@ export default function OrdersPage() {
   const requestsQuery = useMemo(() => {
     if (firestore && artisanData?.categories && artisanData.categories.length > 0) {
       const q = query(
-        collection(firestore, 'customizationRequests'),
+        collection(firestore, 'CustomizationRequest'),
         where('status', '==', 'pending'),
         where('category', 'in', artisanData.categories)
       );
@@ -91,7 +91,7 @@ export default function OrdersPage() {
   const handleAccept = async (request: CustomizationRequest) => {
     if (!firestore || !user) return;
     setIsAccepting(request.id);
-    const requestRef = doc(firestore, 'customizationRequests', request.id);
+    const requestRef = doc(firestore, 'CustomizationRequest', request.id);
     try {
         await updateDoc(requestRef, {
             status: 'accepted',

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -179,7 +180,7 @@ export default function CustomizePage() {
     
     try {
       const compressedGeneratedImage = await compressImage(generatedImage);
-      const requestsRef = collection(firestore, 'customizationRequests');
+      const requestsRef = collection(firestore, 'CustomizationRequest');
       
       const newRequest = {
         buyerId: user.uid,
@@ -210,7 +211,7 @@ export default function CustomizePage() {
           toast({
             variant: 'destructive',
             title: 'Submission Failed',
-            description: 'Could not send your request. A permission error might have occurred.',
+            description: error.message || 'Could not send your request. A permission error might have occurred.',
           });
         })
         .finally(() => {

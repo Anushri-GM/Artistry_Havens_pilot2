@@ -11,7 +11,7 @@ service cloud.firestore {
 
     // Helper function to check if the user is an artisan
     function isArtisan() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'artisan';
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType == 'artisan';
     }
 
     // Users can read their own profile. Admins can read any profile.
@@ -22,7 +22,7 @@ service cloud.firestore {
       allow create: if request.auth != null && request.auth.uid == userId;
       allow update: if request.auth != null && 
                      (
-                       (request.auth.uid == userId && request.resource.data.role == resource.data.role) ||
+                       (request.auth.uid == userId && (!('role' in request.resource.data) || request.resource.data.role == resource.data.role)) ||
                        isAdmin()
                      );
       allow delete: if isAdmin();
@@ -53,7 +53,7 @@ service cloud.firestore {
     }
     
     // Customization Requests
-    match /customizationRequests/{requestId} {
+    match /CustomizationRequest/{requestId} {
       // A buyer can create a request for themselves.
       allow create: if request.auth != null && request.resource.data.buyerId == request.auth.uid;
 

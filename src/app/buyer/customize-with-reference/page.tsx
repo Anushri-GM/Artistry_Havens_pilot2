@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -189,7 +190,7 @@ export default function CustomizeWithReferencePage() {
           compressImage(generatedImage)
       ]);
 
-      const requestsRef = collection(firestore, 'customizationRequests');
+      const requestsRef = collection(firestore, 'CustomizationRequest');
       const newRequest = {
         buyerId: user.uid,
         referenceImageUrl: compressedReferenceImage,
@@ -221,7 +222,7 @@ export default function CustomizeWithReferencePage() {
           toast({
             variant: 'destructive',
             title: 'Submission Failed',
-            description: 'Could not send your request due to a server error or permissions issue.',
+            description: error.message || 'Could not send your request due to a server error or permissions issue.',
           });
         })
         .finally(() => {
