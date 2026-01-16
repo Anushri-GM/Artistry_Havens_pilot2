@@ -12,12 +12,13 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Edit, Save, Star, Eye, EyeOff, Upload } from 'lucide-react';
-import { artisans } from '@/lib/data';
+import { artisans, categories as baseCategories } from '@/lib/data';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { useTranslation } from '@/context/translation-context';
 import { useUser, useFirestore } from '@/firebase';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { Badge } from '@/components/ui/badge';
 
 
 const profileSchema = z.object({
@@ -47,7 +48,8 @@ function ProfilePageComponent() {
       companyName: 'Elena\'s Ceramics',
       rating: 4.8,
       address: '123 Clay Street, Pottery Town, 45678',
-      phone: '987-654-3210'
+      phone: '987-654-3210',
+      categories: [] as string[],
   });
   
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -72,7 +74,7 @@ function ProfilePageComponent() {
         let data;
         if (docSnap.exists()) {
             data = docSnap.data();
-            setArtisan(prev => ({...prev, ...data}));
+            setArtisan(prev => ({...prev, ...data, categories: data.categories || [] }));
             if(data.avatarUrl) {
                 setImagePreview(data.avatarUrl);
             }
@@ -84,6 +86,7 @@ function ProfilePageComponent() {
                 companyName: '',
                 address: '',
                 phone: user.phoneNumber || '',
+                categories: [],
             };
         }
         
@@ -173,6 +176,15 @@ function ProfilePageComponent() {
     }
     return stars;
   };
+  
+  const categories = baseCategories.map((category, index) => ({
+    ...category,
+    name: translations.product_categories[index] || category.name,
+  }));
+
+  const selectedCategoryDetails = (artisan.categories || []).map(catId => 
+    categories.find(baseCat => baseCat.id === catId)
+  ).filter(Boolean);
 
   if (isUserLoading) {
       return (
@@ -255,6 +267,31 @@ function ProfilePageComponent() {
             </CardHeader>
 
             <CardContent className="space-y-8">
+                <Separator />
+                
+                 <div>
+                    <h3 className="font-headline text-xl font-semibold mb-1">My Crafts</h3>
+                    {isEditing ? (
+                        <>
+                            <p className="text-sm text-muted-foreground mb-4">Change which crafts you specialize in.</p>
+                            <Button type="button" variant="outline" onClick={() => router.push('/artisan/category-selection')}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Edit Craft Categories
+                            </Button>
+                        </>
+                    ) : (
+                        <div className="flex flex-wrap gap-2 mt-2">
+                            {selectedCategoryDetails.length > 0 ? (
+                                selectedCategoryDetails.map(cat => cat && (
+                                    <Badge key={cat.id} variant="secondary" className="text-base py-1 px-3">{cat.name}</Badge>
+                                ))
+                            ) : (
+                                <p className="text-sm text-muted-foreground">No crafts selected yet.</p>
+                            )}
+                        </div>
+                    )}
+                </div>
+                
                 <Separator />
                 
                 <div>
