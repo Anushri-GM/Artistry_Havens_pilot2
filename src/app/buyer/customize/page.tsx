@@ -193,12 +193,12 @@ export default function CustomizePage() {
       form.reset();
       setGeneratedImage(null);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error submitting customization request:', error);
       toast({
         variant: 'destructive',
         title: 'Submission Failed',
-        description: 'Could not send your request. Please try again.',
+        description: error.message || 'Could not send your request. Please try again.',
       });
     } finally {
       setIsSubmitting(false);
