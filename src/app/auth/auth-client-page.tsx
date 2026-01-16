@@ -150,11 +150,27 @@ function AuthClientPageComponent() {
         }
     } catch (error: any) {
         console.error("OTP Verification Error:", error);
-        toast({
-            variant: 'destructive',
-            title: t.invalidOtpToast,
-            description: error.message || t.invalidOtpToastDesc,
-        });
+        if (error.code === 'auth/code-expired') {
+            toast({
+                variant: 'destructive',
+                title: 'OTP Expired',
+                description: 'The OTP has expired. Please request a new one.',
+            });
+            setOtpSent(false);
+            form.resetField('otp');
+        } else if (error.code === 'auth/invalid-verification-code') {
+            toast({
+                variant: 'destructive',
+                title: t.invalidOtpToast,
+                description: t.invalidOtpToastDesc,
+            });
+        } else {
+            toast({
+                variant: 'destructive',
+                title: 'Verification Failed',
+                description: error.message || "An unexpected error occurred.",
+            });
+        }
     } finally {
         setIsLoading(false);
     }

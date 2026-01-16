@@ -157,11 +157,17 @@ export default function ArtisanRegisterPage() {
             });
             setOtpSent(false); // Allow user to request a new OTP
             form.resetField('otp');
-        } else {
+        } else if (error.code === 'auth/invalid-verification-code') {
             toast({
                 variant: 'destructive',
                 title: t.invalidOtpToast,
-                description: error.message || t.invalidOtpToastDesc,
+                description: t.invalidOtpToastDesc,
+            });
+        } else {
+            toast({
+                variant: 'destructive',
+                title: "Verification Error",
+                description: error.message || "An unexpected error occurred during verification.",
             });
         }
     } finally {
