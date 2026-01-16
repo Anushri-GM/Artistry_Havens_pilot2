@@ -131,6 +131,29 @@ export default function CustomizePage() {
       setIsGenerating(false);
     }
   };
+  
+  const compressImage = (dataUrl: string, maxWidth = 800): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const img = new window.Image();
+        img.src = dataUrl;
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const scaleSize = maxWidth / img.width;
+            canvas.width = maxWidth;
+            canvas.height = img.height * scaleSize;
+            
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+                return reject('Could not get canvas context');
+            }
+            
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            
+            resolve(canvas.toDataURL('image/jpeg', 0.8)); // Use JPEG for better compression
+        };
+        img.onerror = reject;
+    });
+  };
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!generatedImage) {
@@ -153,10 +176,11 @@ export default function CustomizePage() {
     setIsSubmitting(true);
     
     try {
+      const compressedGeneratedImage = await compressImage(generatedImage);
       const requestsRef = collection(firestore, 'customizationRequests');
       await addDoc(requestsRef, {
         buyerId: user.uid,
-        generatedImageUrl: generatedImage,
+        generatedImageUrl: compressedGeneratedImage,
         description: values.description,
         status: 'pending',
         createdAt: serverTimestamp(),
