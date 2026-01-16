@@ -57,10 +57,13 @@ service cloud.firestore {
       // A buyer can create a request for themselves.
       allow create: if request.auth != null && request.resource.data.buyerId == request.auth.uid;
 
-      // A user can read a request if:
+      // An authenticated user can list requests. Client-side queries MUST be secure.
+      allow list: if request.auth != null;
+
+      // A user can get a request if:
       // 1. They are the buyer who created it.
       // 2. They are an artisan whose `categories` list contains the request's category.
-      allow read: if request.auth != null && (
+      allow get: if request.auth != null && (
         resource.data.buyerId == request.auth.uid ||
         (isArtisan() && resource.data.category in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.categories)
       );
