@@ -84,6 +84,7 @@ export default function BuyerProductDetailPage() {
         productName: product.name,
         productImageUrl: product.image.url,
         buyerName: buyerProfile.name || 'Valued Customer',
+        artisanName: product.artisan.name,
         quantity: 1,
         totalAmount: product.price,
         status: 'Processing' as const, // Default status
@@ -99,7 +100,7 @@ export default function BuyerProductDetailPage() {
         description: t.toastDescription.replace('{productName}', product.name),
       });
 
-      router.push('/buyer/profile');
+      router.push('/buyer/orders');
 
     } catch (error: any) {
       console.error('Error creating order:', error);

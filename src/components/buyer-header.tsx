@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Search, Sparkles } from 'lucide-react';
+import { Search, Sparkles, ShoppingCart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -22,6 +22,12 @@ export default function BuyerHeader() {
             <Button variant="ghost" size="icon">
               <Sparkles className="h-5 w-5 text-primary" />
               <span className="sr-only">Customize</span>
+            </Button>
+          </Link>
+          <Link href="/buyer/orders" passHref>
+            <Button variant="ghost" size="icon">
+              <ShoppingCart className="h-5 w-5" />
+              <span className="sr-only">Orders</span>
             </Button>
           </Link>
       </div>

@@ -89,6 +89,7 @@ export type Order = {
   productName: string;
   productImageUrl: string;
   buyerName: string;
+  artisanName: string;
   quantity: number;
   totalAmount: number;
   status: 'Processing' | 'Shipped' | 'Delivered';
@@ -99,4 +100,5 @@ export type Order = {
   createdAt: any; // serverTimestamp
   updatedAt: any; // serverTimestamp
 };
+
 
