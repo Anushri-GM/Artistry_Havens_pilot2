@@ -13,7 +13,12 @@
         "photoUrl": { "type": "string", "description": "URL of the user's profile picture." },
         "bio": { "type": "string", "description": "A short biography of the user." },
         "location": { "type": "string", "description": "User's location." },
-        "contactInfo": { "type": "string", "description": "User's contact information." }
+        "contactInfo": { "type": "string", "description": "User's contact information." },
+        "categories": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "For artisans, this lists the craft categories they specialize in."
+        }
       },
       "required": ["displayName", "userType", "createdAt"]
     },

@@ -9,6 +9,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Check } from 'lucide-react';
 import { categories as baseCategories } from '@/lib/data';
 import { useTranslation } from '@/context/translation-context';
+import { useUser, useFirestore } from '@/firebase';
+import { doc, setDoc } from 'firebase/firestore';
 
 export default function CategorySelectionPage() {
   const router = useRouter();
@@ -16,6 +18,8 @@ export default function CategorySelectionPage() {
   const { translations } = useTranslation();
   const t = translations.category_selection_page;
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const { user } = useUser();
+  const firestore = useFirestore();
 
   const categories = baseCategories.map((category, index) => ({
     ...category,
@@ -30,7 +34,7 @@ export default function CategorySelectionPage() {
     );
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (selectedCategories.length === 0) {
       toast({
         variant: 'destructive',
@@ -39,13 +43,35 @@ export default function CategorySelectionPage() {
       });
       return;
     }
-    // In a real app, save this to the user's profile
-    console.log('Selected categories:', selectedCategories);
-    toast({
-      title: t.savedToast,
-      description: t.savedToastDesc,
-    });
-    router.push('/artisan/post-auth');
+
+    if (!user || !firestore) {
+      toast({
+        variant: 'destructive',
+        title: 'Authentication Error',
+        description: 'You must be logged in to save your selections.',
+      });
+      return;
+    }
+
+    try {
+      const userRef = doc(firestore, 'users', user.uid);
+      await setDoc(userRef, {
+        categories: selectedCategories,
+      }, { merge: true });
+
+      toast({
+        title: t.savedToast,
+        description: t.savedToastDesc,
+      });
+      router.push('/artisan/post-auth');
+    } catch (error) {
+      console.error("Error saving categories:", error);
+      toast({
+        variant: 'destructive',
+        title: "Save Failed",
+        description: "Could not save your selected categories. Please try again.",
+      });
+    }
   };
 
   return (
