@@ -72,7 +72,7 @@ export type SavedAdvertisement = {
 export type CustomizationRequest = {
   id?: string;
   buyerId: string;
-  referenceImageUrl: string;
+  referenceImageUrl?: string;
   generatedImageUrl: string;
   description: string;
   status: 'pending' | 'accepted' | 'rejected';
@@ -80,4 +80,5 @@ export type CustomizationRequest = {
 };
 
     
+
 

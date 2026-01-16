@@ -23,6 +23,8 @@ import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useTranslation } from '@/context/translation-context';
 import { useLanguage } from '@/context/language-context';
 import { cn } from '@/lib/utils';
+import { useUser, useFirestore } from '@/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 const formSchema = z.object({
   description: z.string().min(10, 'Please describe your idea in at least 10 characters.'),
@@ -35,6 +37,8 @@ export default function CustomizePage() {
   const { translations, isTranslating } = useTranslation();
   const t = translations.customize_page;
   const { language } = useLanguage();
+  const { user } = useUser();
+  const firestore = useFirestore();
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -137,20 +141,44 @@ export default function CustomizePage() {
         });
         return;
     }
+     if (!user || !firestore) {
+      toast({
+        variant: 'destructive',
+        title: 'Authentication Error',
+        description: 'You must be logged in to send a request.',
+      });
+      return;
+    }
     
     setIsSubmitting(true);
-    // Simulate sending the request to an artisan
-    console.log('Submitting request:', { ...values, imageUrl: generatedImage });
     
-    setTimeout(() => {
-        setIsSubmitting(false);
-        toast({
-            title: t.requestSentToast,
-            description: t.requestSentDesc,
-        });
-        form.reset();
-        setGeneratedImage(null);
-    }, 1500);
+    try {
+      const requestsRef = collection(firestore, 'customizationRequests');
+      await addDoc(requestsRef, {
+        buyerId: user.uid,
+        generatedImageUrl: generatedImage,
+        description: values.description,
+        status: 'pending',
+        createdAt: serverTimestamp(),
+      });
+
+      toast({
+        title: t.requestSentToast,
+        description: t.requestSentDesc,
+      });
+      form.reset();
+      setGeneratedImage(null);
+
+    } catch (error) {
+      console.error('Error submitting customization request:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Submission Failed',
+        description: 'Could not send your request. Please try again.',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   const getCategoryDisplayValue = (value: string) => {

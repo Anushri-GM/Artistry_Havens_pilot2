@@ -86,16 +86,16 @@
     "CustomizationRequest": {
       "title": "CustomizationRequest",
       "type": "object",
-      "description": "Represents a custom design request from a buyer, using a reference image.",
+      "description": "Represents a custom design request from a buyer, generated either from a text prompt or a reference image.",
       "properties": {
         "buyerId": { "type": "string", "description": "The UID of the buyer making the request." },
-        "referenceImageUrl": { "type": "string", "description": "The data URI of the user-uploaded reference image." },
+        "referenceImageUrl": { "type": "string", "description": "The optional data URI of the user-uploaded reference image." },
         "generatedImageUrl": { "type": "string", "description": "The data URI of the AI-generated image showing the requested changes." },
         "description": { "type": "string", "description": "The buyer's description of the requested changes." },
         "status": { "type": "string", "description": "The status of the request (e.g., 'pending', 'accepted', 'rejected')." },
         "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of request creation." }
       },
-      "required": ["buyerId", "referenceImageUrl", "generatedImageUrl", "description", "createdAt"]
+      "required": ["buyerId", "generatedImageUrl", "description", "createdAt"]
     }
   },
   "auth": {
