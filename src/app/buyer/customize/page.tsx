@@ -9,7 +9,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { buyerAiDesignedProducts } from '@/ai/flows/buyer-ai-designed-products';
-import { productCategories as baseProductCategories } from '@/lib/data';
+import { categories as baseCategoriesData } from '@/lib/data';
 import 'regenerator-runtime/runtime';
 
 import { Button } from '@/components/ui/button';
@@ -109,9 +109,12 @@ export default function CustomizePage() {
     setIsGenerating(true);
     setGeneratedImage(null);
     try {
+      const categoryObject = baseCategoriesData.find(c => c.id === category);
+      const categoryName = categoryObject ? categoryObject.name : 'General';
+
       const imageUrl = await buyerAiDesignedProducts({
         prompt: description,
-        style: category,
+        style: categoryName,
         language: language,
       });
       setGeneratedImage(imageUrl);
@@ -182,6 +185,7 @@ export default function CustomizePage() {
         buyerId: user.uid,
         generatedImageUrl: compressedGeneratedImage,
         description: values.description,
+        category: values.category,
         status: 'pending',
         createdAt: serverTimestamp(),
       });
@@ -206,11 +210,15 @@ export default function CustomizePage() {
   }
 
   const getCategoryDisplayValue = (value: string) => {
-    const index = baseProductCategories.findIndex(c => c === value);
-    if (index !== -1 && translations.product_categories.length > index) {
-      return translations.product_categories[index];
+    const category = baseCategoriesData.find(c => c.id === value);
+    if (category) {
+        const index = baseCategoriesData.indexOf(category);
+        if (translations.product_categories.length > index) {
+            return translations.product_categories[index];
+        }
+        return category.name;
     }
-    return value;
+    return 'Select a category';
   };
 
   return (
@@ -273,9 +281,9 @@ export default function CustomizePage() {
                         </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                        {baseProductCategories.map((cat, index) => (
-                            <SelectItem key={cat} value={cat}>
-                                {translations.product_categories[index] || cat}
+                        {baseCategoriesData.map((cat, index) => (
+                            <SelectItem key={cat.id} value={cat.id}>
+                                {translations.product_categories[index] || cat.name}
                             </SelectItem>
                         ))}
                         </SelectContent>

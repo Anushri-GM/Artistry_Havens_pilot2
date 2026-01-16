@@ -75,10 +75,12 @@ export type CustomizationRequest = {
   referenceImageUrl?: string;
   generatedImageUrl: string;
   description: string;
+  category: string;
   status: 'pending' | 'accepted' | 'rejected';
   createdAt: any; // for serverTimestamp
 };
 
     
+
 
 

@@ -8,6 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { generateProductImageFromReference } from '@/ai/flows/generate-product-image-from-reference';
+import { categories as baseCategoriesData } from '@/lib/data';
 import 'regenerator-runtime/runtime';
 
 import { Button } from '@/components/ui/button';
@@ -15,6 +16,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Sparkles, Send, Mic, ChevronLeft, Upload } from 'lucide-react';
 import { useTranslation } from '@/context/translation-context';
@@ -25,6 +27,7 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 const formSchema = z.object({
   description: z.string().min(10, 'Please describe your idea in at least 10 characters.'),
+  category: z.string().min(1, 'Please select a category.'),
 });
 
 export default function CustomizeWithReferencePage() {
@@ -48,6 +51,7 @@ export default function CustomizeWithReferencePage() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       description: '',
+      category: '',
     },
   });
 
@@ -192,6 +196,7 @@ export default function CustomizeWithReferencePage() {
         referenceImageUrl: compressedReferenceImage,
         generatedImageUrl: compressedGeneratedImage,
         description: values.description,
+        category: values.category,
         status: 'pending',
         createdAt: serverTimestamp(),
       });
@@ -215,6 +220,17 @@ export default function CustomizeWithReferencePage() {
     }
   }
 
+  const getCategoryDisplayValue = (value: string) => {
+    const category = baseCategoriesData.find(c => c.id === value);
+    if (category) {
+        const index = baseCategoriesData.indexOf(category);
+        if (translations.product_categories.length > index) {
+            return translations.product_categories[index];
+        }
+        return category.name;
+    }
+    return translations.customize_page.selectCategoryPlaceholder;
+  };
 
   return (
     <div className="container mx-auto p-4 max-w-2xl">
@@ -286,6 +302,30 @@ export default function CustomizeWithReferencePage() {
                   <FormMessage />
                 </FormItem>
               )}/>
+
+              <FormField control={form.control} name="category" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{translations.customize_page.craftCategoryLabel}</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={!referenceImage}>
+                        <FormControl>
+                        <SelectTrigger>
+                            <SelectValue placeholder={translations.customize_page.selectCategoryPlaceholder}>
+                                {getCategoryDisplayValue(field.value)}
+                            </SelectValue>
+                        </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                        {baseCategoriesData.map((cat, index) => (
+                            <SelectItem key={cat.id} value={cat.id}>
+                                {translations.product_categories[index] || cat.name}
+                            </SelectItem>
+                        ))}
+                        </SelectContent>
+                    </Select>
+                  <FormMessage />
+                </FormItem>
+              )}/>
+
 
               <Button type="button" onClick={handleGenerateImage} disabled={isGenerating || !referenceImage} className="w-full">
                   {isGenerating ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{t.visualizingButton}</> : <><Sparkles className="mr-2 h-4 w-4" />{t.visualizeButton}</>}

@@ -1,0 +1,159 @@
+
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of the application, who can be an artisan, buyer, or sponsor.",
+      "properties": {
+        "displayName": { "type": "string", "description": "User's display name." },
+        "userType": { "type": "string", "description": "The type of user (artisan, buyer, or sponsor)." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of user creation." },
+        "email": { "type": "string", "description": "User's email address." },
+        "photoUrl": { "type": "string", "description": "URL of the user's profile picture." },
+        "bio": { "type": "string", "description": "A short biography of the user." },
+        "location": { "type": "string", "description": "User's location." },
+        "contactInfo": { "type": "string", "description": "User's contact information." },
+        "categories": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "For artisans, this lists the craft categories they specialize in."
+        }
+      },
+      "required": ["displayName", "userType", "createdAt"]
+    },
+    "Product": {
+      "title": "Product",
+      "type": "object",
+      "description": "Represents a product listed by an artisan for sale.",
+      "properties": {
+        "name": { "type": "string", "description": "The name of the product." },
+        "price": { "type": "number", "description": "The price of the product." },
+        "description": { "type": "string", "description": "A detailed description of the product." },
+        "story": { "type": "string", "description": "A short, engaging story about the product." },
+        "mainImageUrl": { "type": "string", "description": "The main image URL for the product." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of product creation." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Timestamp of the last product update." },
+        "artisan": { "$ref": "#/entities/User", "description": "A reference to the artisan who created the product." },
+        "category": { "type": "string", "description": "The category the product belongs to." },
+        "availableQuantity": { "type": "integer", "description": "The quantity of the product available for sale." }
+      },
+      "required": ["name", "price", "description", "mainImageUrl", "createdAt", "updatedAt"]
+    },
+    "CustomizationOption": {
+      "title": "CustomizationOption",
+      "type": "object",
+      "description": "Represents a customization option available for a product.",
+      "properties": {
+        "optionName": { "type": "string", "description": "The name of the customization option (e.g., 'Color', 'Size')." },
+        "optionType": { "type": "string", "description": "The type of input for the option (e.g., 'dropdown', 'text')." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of option creation." },
+        "product": { "$ref": "#/entities/Product", "description": "A reference to the product this option belongs to." },
+        "predefinedValues": { "type": "array", "items": { "type": "string" }, "description": "A list of predefined values for the option (e.g., ['Red', 'Blue', 'Green'])." },
+        "inputInstructions": { "type": "string", "description": "Instructions for the user on how to provide customization input." }
+      },
+      "required": ["optionName", "optionType", "createdAt"]
+    },
+    "Order": {
+      "title": "Order",
+      "type": "object",
+      "description": "Represents a purchase order made by a buyer.",
+      "properties": {
+        "orderDate": { "type": "string", "format": "date-time", "description": "The date the order was placed." },
+        "totalAmount": { "type": "number", "description": "The total amount of the order." },
+        "status": { "type": "string", "description": "The current status of the order (e.g., 'Processing', 'Shipped')." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of order creation." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Timestamp of the last order update." },
+        "buyer": { "$ref": "#/entities/User", "description": "A reference to the buyer who placed the order." },
+        "artisan": { "$ref": "#/entities/User", "description": "A reference to the artisan fulfilling the order." },
+        "product": { "$ref": "#/entities/Product", "description": "A reference to the product that was ordered." },
+        "shippingAddress": { "type": "string", "description": "The shipping address for the order." },
+        "paymentId": { "type": "string", "description": "The identifier for the payment transaction." },
+        "customizationDetails": { "type": "string", "description": "Details about any customizations requested for the product." }
+      },
+      "required": ["orderDate", "totalAmount", "status", "createdAt", "updatedAt"]
+    },
+    "Review": {
+      "title": "Review",
+      "type": "object",
+      "description": "Represents a review left by a buyer for a product.",
+      "properties": {
+        "rating": { "type": "integer", "description": "The numerical rating given (e.g., 1-5)." },
+        "reviewText": { "type": "string", "description": "The text content of the review." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of when the review was submitted." },
+        "buyer": { "$ref": "#/entities/User", "description": "A reference to the buyer who wrote the review." },
+        "product": { "$ref": "#/entities/Product", "description": "A reference to the product being reviewed." },
+        "artisan": { "$ref": "#/entities/User", "description": "A reference to the artisan of the product." },
+        "imageUrls": { "type": "array", "items": { "type": "string" }, "description": "An array of image URLs submitted with the review." }
+      },
+      "required": ["rating", "reviewText", "createdAt"]
+    },
+    "CustomizationRequest": {
+      "title": "CustomizationRequest",
+      "type": "object",
+      "description": "Represents a custom design request from a buyer, generated either from a text prompt or a reference image.",
+      "properties": {
+        "buyerId": { "type": "string", "description": "The UID of the buyer making the request." },
+        "referenceImageUrl": { "type": "string", "description": "The optional data URI of the user-uploaded reference image." },
+        "generatedImageUrl": { "type": "string", "description": "The data URI of the AI-generated image showing the requested changes." },
+        "description": { "type": "string", "description": "The buyer's description of the requested changes." },
+        "category": { "type": "string", "description": "The ID of the craft category for the request." },
+        "status": { "type": "string", "description": "The status of the request (e.g., 'pending', 'accepted', 'rejected')." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of request creation." }
+      },
+      "required": ["buyerId", "generatedImageUrl", "description", "category", "createdAt"]
+    }
+  },
+  "auth": {
+    "providers": [
+      "phone"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "schema": { "$ref": "#/entities/User" },
+          "description": "Stores user profiles. The userId matches the Firebase Auth UID."
+        }
+      },
+      {
+        "path": "/products/{productId}",
+        "definition": {
+          "schema": { "$ref": "#/entities/Product" },
+          "description": "Stores all products listed on the platform."
+        }
+      },
+      {
+        "path": "/products/{productId}/customizationOptions/{optionId}",
+        "definition": {
+          "schema": { "$ref": "#/entities/CustomizationOption" },
+          "description": "Stores customization options for a specific product."
+        }
+      },
+      {
+        "path": "/orders/{orderId}",
+        "definition": {
+          "schema": { "$ref": "#/entities/Order" },
+          "description": "Stores all orders placed on the platform."
+        }
+      },
+      {
+        "path": "/reviews/{reviewId}",
+        "definition": {
+          "schema": { "$ref": "#/entities/Review" },
+          "description": "Stores all reviews for products."
+        }
+      },
+      {
+        "path": "/customizationRequests/{requestId}",
+        "definition": {
+          "schema": { "$ref": "#/entities/CustomizationRequest" },
+          "description": "Stores custom design requests made by buyers using a reference image."
+        }
+      }
+    ],
+    "reasoning": "This Firestore data structure is designed around the new schema. It uses top-level collections for major entities like Users, Products, Orders, and Reviews for easier querying. Customization options are nested under their respective products. User-specific data is keyed by the Firebase Auth UID to ensure a direct and secure link between authentication and user data."
+  }
+}
