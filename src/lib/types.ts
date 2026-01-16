@@ -81,8 +81,22 @@ export type CustomizationRequest = {
   artisanId?: string;
 };
 
-    
-
-
-
+export type Order = {
+  id?: string;
+  artisan: any; // DocumentReference
+  buyer: any; // DocumentReference
+  product: any; // DocumentReference
+  productName: string;
+  productImageUrl: string;
+  buyerName: string;
+  quantity: number;
+  totalAmount: number;
+  status: 'Processing' | 'Shipped' | 'Delivered';
+  shippingAddress: string;
+  paymentId: string;
+  customizationDetails?: string;
+  orderDate: any; // serverTimestamp
+  createdAt: any; // serverTimestamp
+  updatedAt: any; // serverTimestamp
+};
 

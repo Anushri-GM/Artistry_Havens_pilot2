@@ -8,9 +8,9 @@ import { useToast } from '@/hooks/use-toast';
 import { getAuth, signOut } from 'firebase/auth';
 import { LogOut, User, ShoppingBag, ChevronLeft, Edit, Save, Upload } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useUser, useFirestore } from '@/firebase';
-import type { Product } from '@/lib/types';
-import { useState, useEffect, Suspense, useRef } from 'react';
+import { useUser, useFirestore, useCollection } from '@/firebase';
+import type { Order } from '@/lib/types';
+import { useState, useEffect, Suspense, useRef, useMemo } from 'react';
 import Image from 'next/image';
 import { format } from 'date-fns';
 import { Separator } from '@/components/ui/separator';
@@ -18,15 +18,11 @@ import { useTranslation } from '@/context/translation-context';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp, collection, query, where } from 'firebase/firestore';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Loader2 } from 'lucide-react';
 
-interface BuyerOrder extends Product {
-  orderDate: string;
-  status: 'Processing' | 'Shipped' | 'Delivered';
-}
 
 const profileSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters.'),
@@ -45,7 +41,6 @@ function BuyerProfilePageComponent() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
 
-  const [orders, setOrders] = useState<BuyerOrder[]>([]);
   const { translations } = useTranslation();
   const t = translations.buyer_profile_page;
   
@@ -64,10 +59,18 @@ function BuyerProfilePageComponent() {
     defaultValues: { name: '', phone: '' },
   });
 
-  useEffect(() => {
-    const storedOrders = JSON.parse(localStorage.getItem('buyerOrders') || '[]');
-    setOrders(storedOrders);
-  }, []);
+  const ordersQuery = useMemo(() => {
+    if (user && firestore) {
+      const buyerRef = doc(firestore, 'users', user.uid);
+      const q = query(collection(firestore, 'orders'), where('buyer', '==', buyerRef));
+      (q as any).__memo = true;
+      return q;
+    }
+    return null;
+  }, [user, firestore]);
+
+  const { data: orders, isLoading: areOrdersLoading } = useCollection<Order>(ordersQuery);
+
 
   useEffect(() => {
     async function fetchProfile() {
@@ -225,19 +228,23 @@ function BuyerProfilePageComponent() {
                 <CardDescription>{t.orderHistoryDescription}</CardDescription>
             </CardHeader>
             <CardContent>
-                {orders.length > 0 ? (
+                {areOrdersLoading ? (
+                    <div className="flex justify-center p-8">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary"/>
+                    </div>
+                ) : orders && orders.length > 0 ? (
                     <div className="space-y-4">
                         {orders.map(order => (
                             <div key={order.id}>
                                 <div className="flex gap-4">
-                                    <Image src={order.image.url} alt={order.name} width={64} height={64} className="rounded-md object-cover aspect-square bg-muted"/>
+                                    <Image src={order.productImageUrl} alt={order.productName} width={64} height={64} className="rounded-md object-cover aspect-square bg-muted"/>
                                     <div className="flex-grow">
-                                        <h4 className="font-semibold">{order.name}</h4>
+                                        <h4 className="font-semibold">{order.productName}</h4>
                                         <p className="text-sm text-muted-foreground">{translations.buyer_product_page.by} {order.artisan.name}</p>
-                                        <p className="text-xs text-muted-foreground">{t.orderedOn} {format(new Date(order.orderDate), 'PPP')}</p>
+                                        <p className="text-xs text-muted-foreground">{t.orderedOn} {order.orderDate ? format(order.orderDate.toDate(), 'PPP') : 'N/A'}</p>
                                     </div>
                                     <div className="text-right">
-                                        <p className="font-semibold">₹{order.price.toFixed(2)}</p>
+                                        <p className="font-semibold">₹{order.totalAmount.toFixed(2)}</p>
                                         <p className="text-xs text-muted-foreground">{order.status}</p>
                                     </div>
                                 </div>

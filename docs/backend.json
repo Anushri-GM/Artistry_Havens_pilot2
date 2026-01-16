@@ -61,7 +61,7 @@
       "properties": {
         "orderDate": { "type": "string", "format": "date-time", "description": "The date the order was placed." },
         "totalAmount": { "type": "number", "description": "The total amount of the order." },
-        "status": { "type": "string", "description": "The current status of the order (e.g., 'Processing', 'Shipped')." },
+        "status": { "type": "string", "enum": ["Processing", "Shipped", "Delivered"], "description": "The current status of the order." },
         "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of order creation." },
         "updatedAt": { "type": "string", "format": "date-time", "description": "Timestamp of the last order update." },
         "buyer": { "$ref": "#/entities/User", "description": "A reference to the buyer who placed the order." },
@@ -69,9 +69,13 @@
         "product": { "$ref": "#/entities/Product", "description": "A reference to the product that was ordered." },
         "shippingAddress": { "type": "string", "description": "The shipping address for the order." },
         "paymentId": { "type": "string", "description": "The identifier for the payment transaction." },
-        "customizationDetails": { "type": "string", "description": "Details about any customizations requested for the product." }
+        "customizationDetails": { "type": "string", "description": "Details about any customizations requested for the product." },
+        "quantity": { "type": "integer", "description": "The quantity of the product ordered." },
+        "productName": { "type": "string", "description": "Denormalized name of the product for easier display." },
+        "productImageUrl": { "type": "string", "description": "Denormalized image URL of the product." },
+        "buyerName": { "type": "string", "description": "Denormalized name of the buyer for easier display." }
       },
-      "required": ["orderDate", "totalAmount", "status", "createdAt", "updatedAt"]
+      "required": ["orderDate", "totalAmount", "status", "createdAt", "updatedAt", "buyer", "artisan", "product", "quantity", "productName", "productImageUrl", "buyerName"]
     },
     "Review": {
       "title": "Review",

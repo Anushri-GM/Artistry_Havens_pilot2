@@ -2,7 +2,7 @@
 'use client';
 
 import { useRouter, useParams } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -12,17 +12,13 @@ import { Form, FormControl, FormField, FormItem, FormLabel } from '@/components/
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Package, Ship, CheckCircle } from 'lucide-react';
-import type { Product } from '@/lib/types';
+import type { Order } from '@/lib/types';
 import Image from 'next/image';
 import { useLanguage } from '@/context/language-context';
 import { translateText } from '@/services/translation-service';
+import { useDoc, useFirestore } from '@/firebase';
+import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 
-type OrderStatus = 'Processing' | 'Shipped' | 'Delivered';
-interface MyOrder extends Product {
-  quantity: number;
-  status: OrderStatus;
-  orderDate: string;
-}
 
 const updateStatusSchema = z.object({
   status: z.enum(['Processing', 'Shipped', 'Delivered']),
@@ -34,9 +30,9 @@ export default function UpdateStatusPage() {
   const { toast } = useToast();
   const orderId = params.orderId as string;
   const { language } = useLanguage();
+  const firestore = useFirestore();
 
   const [isLoading, setIsLoading] = useState(false);
-  const [order, setOrder] = useState<MyOrder | null>(null);
 
   const [translatedContent, setTranslatedContent] = useState({
     title: 'Update Order Status',
@@ -57,6 +53,23 @@ export default function UpdateStatusPage() {
     resolver: zodResolver(updateStatusSchema),
   });
   
+  const orderRef = useMemo(() => {
+    if (firestore && orderId) {
+      const ref = doc(firestore, 'orders', orderId);
+      (ref as any).__memo = true;
+      return ref;
+    }
+    return null;
+  }, [firestore, orderId]);
+
+  const { data: order, isLoading: isOrderLoading } = useDoc<Order>(orderRef);
+
+  useEffect(() => {
+    if (order) {
+      form.setValue('status', order.status);
+    }
+  }, [order, form]);
+  
   useEffect(() => {
     const translate = async () => {
       if (language !== 'en') {
@@ -70,47 +83,57 @@ export default function UpdateStatusPage() {
       }
     };
     translate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [language]);
 
-  useEffect(() => {
-    if (orderId) {
-      const myOrders: MyOrder[] = JSON.parse(localStorage.getItem('myOrders') || '[]');
-      const currentOrder = myOrders.find(o => o.id === orderId);
-      if (currentOrder) {
-        setOrder(currentOrder);
-        form.setValue('status', currentOrder.status);
-      } else {
-        toast({
-            variant: "destructive",
-            title: translatedContent.orderNotFoundToast,
-        })
-        router.back();
-      }
-    }
-  }, [orderId, form, router, toast, translatedContent.orderNotFoundToast]);
 
-  function onSubmit(values: z.infer<typeof updateStatusSchema>) {
+  async function onSubmit(values: z.infer<typeof updateStatusSchema>) {
+    if (!orderRef) return;
     setIsLoading(true);
-    setTimeout(() => {
-      const myOrders: MyOrder[] = JSON.parse(localStorage.getItem('myOrders') || '[]');
-      const updatedOrders = myOrders.map(o => 
-        o.id === orderId ? { ...o, status: values.status } : o
-      );
-      localStorage.setItem('myOrders', JSON.stringify(updatedOrders));
+
+    try {
+      await updateDoc(orderRef, {
+        status: values.status,
+        updatedAt: serverTimestamp()
+      });
       
-      setIsLoading(false);
       toast({
         title: translatedContent.statusUpdatedToast,
         description: translatedContent.statusUpdatedToastDesc.replace('{status}', values.status),
       });
       router.push('/artisan/orders');
-    }, 1000);
+    } catch(error) {
+        console.error("Error updating order status:", error);
+        toast({
+            variant: "destructive",
+            title: "Update Failed",
+            description: "Could not update the order status. Please try again."
+        });
+    } finally {
+        setIsLoading(false);
+    }
   }
 
-  if (!order) {
+  if (isOrderLoading) {
     return (
         <div className="flex items-center justify-center h-full">
             <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+    )
+  }
+  
+  if (!order) {
+    return (
+        <div className="flex items-center justify-center h-full p-4">
+            <Card>
+                <CardHeader>
+                    <CardTitle>{translatedContent.orderNotFoundToast}</CardTitle>
+                    <CardDescription>This order may have been moved or deleted.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Button onClick={() => router.back()}>Go Back</Button>
+                </CardContent>
+            </Card>
         </div>
     )
   }
@@ -123,9 +146,9 @@ export default function UpdateStatusPage() {
       </header>
         <Card className="mb-8">
             <CardContent className="p-4 flex gap-4 items-center">
-                <Image src={order.image.url} alt={order.name} width={80} height={80} className="rounded-md object-cover aspect-square"/>
+                <Image src={order.productImageUrl} alt={order.productName} width={80} height={80} className="rounded-md object-cover aspect-square"/>
                 <div>
-                    <h2 className="font-bold">{order.name}</h2>
+                    <h2 className="font-bold">{order.productName}</h2>
                     <p className="text-sm text-muted-foreground">{translatedContent.quantity}: {order.quantity}</p>
                 </div>
             </CardContent>

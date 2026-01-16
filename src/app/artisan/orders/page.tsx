@@ -11,22 +11,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useToast } from '@/hooks/use-toast';
 import { Check, X, Package, Ship, CheckCircle, Loader2 } from 'lucide-react';
-import type { Product, CustomizationRequest } from '@/lib/types';
+import type { Order, CustomizationRequest } from '@/lib/types';
 import { useTranslation } from '@/context/translation-context';
 import TutorialDialog from '@/components/tutorial-dialog';
 import { useUser, useFirestore, useCollection, useDoc } from '@/firebase';
-import { collection, query, where, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, doc, updateDoc, Timestamp } from 'firebase/firestore';
 
 type OrderStatus = 'Processing' | 'Shipped' | 'Delivered';
-interface MyOrder extends Product {
-  quantity: number;
-  status: OrderStatus;
-  orderDate: string;
-  expectedDelivery: string;
-}
 
 export default function OrdersPage() {
-  const [myOrders, setMyOrders] = useState<MyOrder[]>([]);
   const { toast } = useToast();
   const router = useRouter();
   const { translations } = useTranslation();
@@ -65,31 +58,35 @@ export default function OrdersPage() {
 
   const { data: customRequestsData, isLoading: isLoadingRequests } = useCollection<CustomizationRequest>(requestsQuery);
 
+  // Fetch regular orders for this artisan
+  const ordersQuery = useMemo(() => {
+    if (user && firestore) {
+      const artisanRef = doc(firestore, 'users', user.uid);
+      const q = query(collection(firestore, 'orders'), where('artisan', '==', artisanRef));
+      (q as any).__memo = true;
+      return q;
+    }
+    return null;
+  }, [user, firestore]);
+  
+  const { data: myOrdersData, isLoading: areOrdersLoading } = useCollection<Order>(ordersQuery);
+
+  const isLoading = isUserLoading || areOrdersLoading || isLoadingRequests;
+
+
   // Filter out requests the artisan has already declined
   const pendingRequests = useMemo(() => {
-    return customRequestsData?.filter(req => !declinedRequests.includes(req.id)) || [];
+    return customRequestsData?.filter(req => !declinedRequests.includes(req.id!)) || [];
   }, [customRequestsData, declinedRequests]);
 
   useEffect(() => {
-    // Load regular orders from local storage
-    const myOrdersFromStorage = JSON.parse(localStorage.getItem('myOrders') || '[]');
-    const enrichedOrders = myOrdersFromStorage.map((order: any) => {
-        const deliveryDate = new Date(order.orderDate);
-        deliveryDate.setDate(deliveryDate.getDate() + 7);
-        return {
-            ...order,
-            expectedDelivery: deliveryDate.toISOString(),
-        }
-    });
-    setMyOrders(enrichedOrders);
-    
     // Load declined custom requests from local storage
     const storedDeclined = JSON.parse(localStorage.getItem('declinedCustomRequests') || '[]');
     setDeclinedRequests(storedDeclined);
   }, []);
 
   const handleAccept = async (request: CustomizationRequest) => {
-    if (!firestore || !user) return;
+    if (!firestore || !user || !request.id) return;
     setIsAccepting(request.id);
     const requestRef = doc(firestore, 'CustomizationRequest', request.id);
     try {
@@ -127,7 +124,15 @@ export default function OrdersPage() {
   };
 
   const renderOrderList = (status: OrderStatus) => {
-    const filteredOrders = myOrders.filter(order => order.status === status);
+    if (isLoading) {
+      return (
+        <div className="flex justify-center items-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      );
+    }
+
+    const filteredOrders = myOrdersData?.filter(order => order.status === status) || [];
 
     if (filteredOrders.length === 0) {
       return (
@@ -144,24 +149,23 @@ export default function OrdersPage() {
             <CardContent className="p-3 sm:p-4 flex flex-col sm:flex-row items-start gap-4">
                <div className="relative w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0">
                 <Image
-                    src={order.image.url}
-                    alt={order.name}
+                    src={order.productImageUrl}
+                    alt={order.productName}
                     width={96}
                     height={96}
                     className="rounded-md object-cover aspect-square bg-muted"
                 />
                </div>
               <div className="flex-grow space-y-1">
-                <CardTitle className="text-md font-headline leading-tight">{order.name}</CardTitle>
+                <CardTitle className="text-md font-headline leading-tight">{order.productName}</CardTitle>
                 <div className="text-xs text-muted-foreground space-y-0.5">
                     <p>{t.quantity}: <span className="font-medium">{order.quantity}</span></p>
-                    <p>{t.orderDate}: <span className="font-medium">{format(new Date(order.orderDate), 'PPP')}</span></p>
-                    <p>{t.expectedDelivery}: <span className="font-medium">{format(new Date(order.expectedDelivery), 'PPP')}</span></p>
+                    {order.orderDate && <p>{t.orderDate}: <span className="font-medium">{format(order.orderDate.toDate(), 'PPP')}</span></p>}
                 </div>
-                <p className="font-bold text-md pt-1">₹{(order.price * order.quantity).toFixed(2)}</p>
+                <p className="font-bold text-md pt-1">₹{(order.totalAmount).toFixed(2)}</p>
               </div>
               <div className="flex flex-col items-stretch gap-2 w-full sm:w-auto sm:self-center">
-                <Button onClick={() => handleUpdate(order.id)} size="sm">{t.updateStatusButton}</Button>
+                <Button onClick={() => handleUpdate(order.id!)} size="sm">{t.updateStatusButton}</Button>
               </div>
             </CardContent>
           </Card>
@@ -171,7 +175,7 @@ export default function OrdersPage() {
   };
   
   const renderRequests = () => {
-    if (isLoadingRequests || isUserLoading) {
+    if (isLoading) {
       return (
         <div className="flex justify-center items-center p-12">
           <Loader2 className="h-8 w-8 animate-spin" />
@@ -213,7 +217,7 @@ export default function OrdersPage() {
                   {isAccepting === request.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
                   {t.acceptButton}
                 </Button>
-                <Button onClick={() => handleDecline(request.id)} variant="outline" size="sm" className="whitespace-nowrap" disabled={!!isAccepting}>
+                <Button onClick={() => handleDecline(request.id!)} variant="outline" size="sm" className="whitespace-nowrap" disabled={!!isAccepting}>
                   <X className="mr-2 h-4 w-4" /> {t.declineButton}
                 </Button>
               </div>

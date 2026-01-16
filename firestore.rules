@@ -76,6 +76,23 @@ service cloud.firestore {
       allow delete: if false; // Immutable for now
     }
 
+    // Rules for Orders
+    match /orders/{orderId} {
+      // A buyer can create an order, and the buyer ID must match their own.
+      allow create: if request.auth != null && request.resource.data.buyer == /databases/$(database)/documents/users/$(request.auth.uid);
+      
+      // The buyer who placed the order or the artisan fulfilling it can read it.
+      allow read: if request.auth != null && (
+        resource.data.buyer == /databases/$(database)/documents/users/$(request.auth.uid) ||
+        resource.data.artisan == /databases/$(database)/documents/users/$(request.auth.uid)
+      );
+
+      // The artisan can update the order status.
+      allow update: if request.auth != null && resource.data.artisan == /databases/$(database)/documents/users/$(request.auth.uid);
+                      
+      allow delete: if false; // Orders should generally not be deleted.
+    }
+
     // Attendance, alerts, bookings, and analytics can only be accessed by admins for now
     match /attendance/{docId} {
       allow read, write: if isAdmin();
