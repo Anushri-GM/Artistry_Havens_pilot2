@@ -9,6 +9,11 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
+    // Helper function to check if the user is an artisan
+    function isArtisan() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'artisan';
+    }
+
     // Users can read their own profile. Admins can read any profile.
     // A user can create their own profile.
     // A user can update their own profile, but cannot change their role. Admins can update any profile.
@@ -47,11 +52,28 @@ service cloud.firestore {
       allow update, delete: if false;
     }
     
-    // Buyers can create customization requests for themselves
+    // Customization Requests
     match /customizationRequests/{requestId} {
+      // A buyer can create a request for themselves.
       allow create: if request.auth != null;
-      allow read: if request.auth != null && resource.data.buyerId == request.auth.uid;
-      allow update, delete: if false; // Immutable for now
+
+      // A user can read a request if:
+      // 1. They are the buyer who created it.
+      // 2. They are an artisan whose `categories` list contains the request's category.
+      allow read: if request.auth != null && (
+        resource.data.buyerId == request.auth.uid ||
+        (isArtisan() && resource.data.category in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.categories)
+      );
+
+      // An artisan can update a request to accept it if:
+      // 1. The request is currently pending.
+      // 2. The artisan is assigning themselves to the request.
+      allow update: if request.auth != null && isArtisan()
+                    && resource.data.status == 'pending'
+                    && request.resource.data.status == 'accepted'
+                    && request.resource.data.artisanId == request.auth.uid;
+                    
+      allow delete: if false; // Immutable for now
     }
 
     // Attendance, alerts, bookings, and analytics can only be accessed by admins for now

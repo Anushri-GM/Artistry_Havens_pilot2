@@ -99,7 +99,8 @@
         "description": { "type": "string", "description": "The buyer's description of the requested changes." },
         "category": { "type": "string", "description": "The ID of the craft category for the request." },
         "status": { "type": "string", "description": "The status of the request (e.g., 'pending', 'accepted', 'rejected')." },
-        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of request creation." }
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of request creation." },
+        "artisanId": { "type": "string", "description": "The UID of the artisan who accepted the request." }
       },
       "required": ["buyerId", "generatedImageUrl", "description", "category", "createdAt"]
     }
@@ -150,7 +151,7 @@
         "path": "/customizationRequests/{requestId}",
         "definition": {
           "schema": { "$ref": "#/entities/CustomizationRequest" },
-          "description": "Stores custom design requests made by buyers using a reference image."
+          "description": "Stores custom design requests from buyers. Artisans in the specified category can view and accept these requests."
         }
       }
     ],

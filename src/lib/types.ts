@@ -78,9 +78,11 @@ export type CustomizationRequest = {
   category: string;
   status: 'pending' | 'accepted' | 'rejected';
   createdAt: any; // for serverTimestamp
+  artisanId?: string;
 };
 
     
+
 
 
 

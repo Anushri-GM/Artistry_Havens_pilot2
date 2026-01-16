@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
@@ -10,11 +10,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useToast } from '@/hooks/use-toast';
-import { Check, X, Package, Ship, CheckCircle } from 'lucide-react';
-import type { Product } from '@/lib/types';
-import { products as sampleProducts } from '@/lib/data';
+import { Check, X, Package, Ship, CheckCircle, Loader2 } from 'lucide-react';
+import type { Product, CustomizationRequest } from '@/lib/types';
 import { useTranslation } from '@/context/translation-context';
 import TutorialDialog from '@/components/tutorial-dialog';
+import { useUser, useFirestore, useCollection, useDoc } from '@/firebase';
+import { collection, query, where, doc, updateDoc } from 'firebase/firestore';
 
 type OrderStatus = 'Processing' | 'Shipped' | 'Delivered';
 interface MyOrder extends Product {
@@ -24,21 +25,53 @@ interface MyOrder extends Product {
   expectedDelivery: string;
 }
 
-interface OrderRequest extends Product {
-    quantity: number;
-    buyerName: string;
-}
-
 export default function OrdersPage() {
-  const [orderRequests, setOrderRequests] = useState<OrderRequest[]>([]);
   const [myOrders, setMyOrders] = useState<MyOrder[]>([]);
   const { toast } = useToast();
   const router = useRouter();
   const { translations } = useTranslation();
   const t = translations.orders_page;
 
+  const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
+
+  const [declinedRequests, setDeclinedRequests] = useState<string[]>([]);
+  const [isAccepting, setIsAccepting] = useState<string | null>(null);
+
+  // Fetch artisan data to get their specialized categories
+  const artisanDocRef = useMemo(() => {
+    if (user && firestore) {
+      const docRef = doc(firestore, 'users', user.uid);
+      (docRef as any).__memo = true;
+      return docRef;
+    }
+    return null;
+  }, [user, firestore]);
+  const { data: artisanData } = useDoc<{ categories: string[] }>(artisanDocRef);
+  
+  // Fetch custom requests based on artisan's categories
+  const requestsQuery = useMemo(() => {
+    if (firestore && artisanData?.categories && artisanData.categories.length > 0) {
+      const q = query(
+        collection(firestore, 'customizationRequests'),
+        where('status', '==', 'pending'),
+        where('category', 'in', artisanData.categories)
+      );
+      (q as any).__memo = true;
+      return q;
+    }
+    return null;
+  }, [firestore, artisanData]);
+
+  const { data: customRequestsData, isLoading: isLoadingRequests } = useCollection<CustomizationRequest>(requestsQuery);
+
+  // Filter out requests the artisan has already declined
+  const pendingRequests = useMemo(() => {
+    return customRequestsData?.filter(req => !declinedRequests.includes(req.id)) || [];
+  }, [customRequestsData, declinedRequests]);
 
   useEffect(() => {
+    // Load regular orders from local storage
     const myOrdersFromStorage = JSON.parse(localStorage.getItem('myOrders') || '[]');
     const enrichedOrders = myOrdersFromStorage.map((order: any) => {
         const deliveryDate = new Date(order.orderDate);
@@ -49,56 +82,43 @@ export default function OrdersPage() {
         }
     });
     setMyOrders(enrichedOrders);
-
-     if (!localStorage.getItem('myOrders') && !localStorage.getItem('hasLoadedOrderRequests')) {
-        const initialRequests = sampleProducts.slice(0, 3).map(p => ({...p, quantity: Math.floor(Math.random() * 3) + 1, buyerName: "Random Buyer"}));
-        setOrderRequests(initialRequests);
-        localStorage.setItem('orderRequests', JSON.stringify(initialRequests));
-        localStorage.setItem('hasLoadedOrderRequests', 'true');
-     } else {
-        setOrderRequests(JSON.parse(localStorage.getItem('orderRequests') || '[]'));
-     }
+    
+    // Load declined custom requests from local storage
+    const storedDeclined = JSON.parse(localStorage.getItem('declinedCustomRequests') || '[]');
+    setDeclinedRequests(storedDeclined);
   }, []);
 
-  const handleAccept = (orderId: string) => {
-    const orderToMove = orderRequests.find(order => order.id === orderId);
-    
-    if (orderToMove) {
-        const newOrder: MyOrder = {
-            ...orderToMove,
-            status: 'Processing',
-            orderDate: new Date().toISOString(),
-            expectedDelivery: '', // This will be set below
-        };
-
-        const deliveryDate = new Date(newOrder.orderDate);
-        deliveryDate.setDate(deliveryDate.getDate() + 7);
-        newOrder.expectedDelivery = deliveryDate.toISOString();
-
-        const updatedMyOrders = [...myOrders, newOrder];
-        localStorage.setItem('myOrders', JSON.stringify(updatedMyOrders));
-        setMyOrders(updatedMyOrders);
-        
-        const updatedRequests = orderRequests.filter(order => order.id !== orderId);
-        setOrderRequests(updatedRequests);
-        localStorage.setItem('orderRequests', JSON.stringify(updatedRequests));
-
-        toast({
-          title: t.orderAcceptedToast,
-          description: t.orderAcceptedToastDesc,
+  const handleAccept = async (request: CustomizationRequest) => {
+    if (!firestore || !user) return;
+    setIsAccepting(request.id);
+    const requestRef = doc(firestore, 'customizationRequests', request.id);
+    try {
+        await updateDoc(requestRef, {
+            status: 'accepted',
+            artisanId: user.uid
         });
+        toast({
+            title: "Request Accepted!",
+            description: "You can now begin working on this custom order."
+        });
+        // The real-time listener of useCollection will automatically remove it from the list.
+        // A next step would be to add this to the "My Orders" tab.
+    } catch (error) {
+        console.error("Error accepting request: ", error);
+        toast({ variant: 'destructive', title: "Error", description: "Could not accept the request." });
+    } finally {
+        setIsAccepting(null);
     }
   };
 
-  const handleDecline = (orderId: string) => {
-    const updatedRequests = orderRequests.filter(order => order.id !== orderId);
-    setOrderRequests(updatedRequests);
-    localStorage.setItem('orderRequests', JSON.stringify(updatedRequests));
-
+  const handleDecline = (requestId: string) => {
+    const newDeclined = [...declinedRequests, requestId];
+    setDeclinedRequests(newDeclined);
+    localStorage.setItem('declinedCustomRequests', JSON.stringify(newDeclined));
     toast({
       variant: 'destructive',
-      title: t.orderDeclinedToast,
-      description: t.orderDeclinedToastDesc,
+      title: "Request Hidden",
+      description: "You will no longer see this request in your list.",
     });
   };
 
@@ -151,12 +171,20 @@ export default function OrdersPage() {
   };
   
   const renderRequests = () => {
-    if (orderRequests.length === 0) {
+    if (isLoadingRequests || isUserLoading) {
       return (
-        <Card className="flex items-center justify-center p-12">
+        <div className="flex justify-center items-center p-12">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      );
+    }
+
+    if (pendingRequests.length === 0) {
+      return (
+        <Card className="flex items-center justify-center p-12 border-dashed">
             <div className="text-center text-muted-foreground">
                 <p className="text-lg">{t.noNewRequests}</p>
-                <p>{t.checkBackLater}</p>
+                <p className="text-sm">{t.checkBackLater}</p>
             </div>
         </Card>
       );
@@ -164,29 +192,28 @@ export default function OrdersPage() {
 
     return (
       <div className="space-y-4">
-        {orderRequests.map((order) => (
-          <Card key={order.id} className="overflow-hidden">
+        {pendingRequests.map((request) => (
+          <Card key={request.id} className="overflow-hidden">
             <CardContent className="p-3 sm:p-4 flex items-start gap-4">
               <div className="relative w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0">
                 <Image
-                    src={order.image.url}
-                    alt={order.name}
+                    src={request.generatedImageUrl}
+                    alt="Custom design request"
                     width={96}
                     height={96}
                     className="rounded-md object-cover aspect-square bg-muted"
                 />
                </div>
               <div className="flex-1">
-                <CardTitle className="text-md font-headline mb-1 leading-tight">{order.name}</CardTitle>
-                <p className="text-sm text-muted-foreground">{t.from}: {order.buyerName}</p>
-                <p className="font-bold text-md my-2">₹{(order.price * order.quantity).toFixed(2)}</p>
-                <p className="text-sm">{t.quantity}: <span className="font-medium">{order.quantity}</span></p>
+                <CardTitle className="text-md font-headline mb-1 leading-tight">Custom Design Request</CardTitle>
+                <p className="text-sm text-muted-foreground line-clamp-3">{request.description}</p>
               </div>
               <div className="flex flex-col gap-2 mt-0 w-auto">
-                <Button onClick={() => handleAccept(order.id)} size="sm" className="whitespace-nowrap">
-                  <Check className="mr-2 h-4 w-4" /> {t.acceptButton}
+                <Button onClick={() => handleAccept(request)} size="sm" className="whitespace-nowrap" disabled={isAccepting === request.id}>
+                  {isAccepting === request.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
+                  {t.acceptButton}
                 </Button>
-                <Button onClick={() => handleDecline(order.id)} variant="outline" size="sm" className="whitespace-nowrap">
+                <Button onClick={() => handleDecline(request.id)} variant="outline" size="sm" className="whitespace-nowrap" disabled={!!isAccepting}>
                   <X className="mr-2 h-4 w-4" /> {t.declineButton}
                 </Button>
               </div>
@@ -210,10 +237,10 @@ export default function OrdersPage() {
           <TabsTrigger value="requests">{t.orderRequestsTab}</TabsTrigger>
           <TabsTrigger value="my-orders">{t.myOrdersTab}</TabsTrigger>
         </TabsList>
-        <TabsContent value="requests">
+        <TabsContent value="requests" className="mt-4">
           {renderRequests()}
         </TabsContent>
-        <TabsContent value="my-orders">
+        <TabsContent value="my-orders" className="mt-4">
            <Accordion type="multiple" defaultValue={['processing']} className="w-full space-y-2">
             <Card>
                 <AccordionItem value="processing" className="border-b-0">
