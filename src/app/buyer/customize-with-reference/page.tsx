@@ -20,6 +20,8 @@ import { Loader2, Sparkles, Send, Mic, ChevronLeft, Upload } from 'lucide-react'
 import { useTranslation } from '@/context/translation-context';
 import { useLanguage } from '@/context/language-context';
 import { cn } from '@/lib/utils';
+import { useUser, useFirestore } from '@/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 const formSchema = z.object({
   description: z.string().min(10, 'Please describe your idea in at least 10 characters.'),
@@ -31,6 +33,8 @@ export default function CustomizeWithReferencePage() {
   const { translations } = useTranslation();
   const t = translations.customize_with_reference_page;
   const { language } = useLanguage();
+  const { user } = useUser();
+  const firestore = useFirestore();
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -134,7 +138,7 @@ export default function CustomizeWithReferencePage() {
   };
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!generatedImage) {
+    if (!generatedImage || !referenceImage) {
         toast({
             variant: 'destructive',
             title: translations.customize_page.noImageToast,
@@ -142,21 +146,45 @@ export default function CustomizeWithReferencePage() {
         });
         return;
     }
+    if (!user || !firestore) {
+      toast({
+        variant: 'destructive',
+        title: 'Authentication Error',
+        description: 'You must be logged in to send a request.',
+      });
+      return;
+    }
     
     setIsSubmitting(true);
-    // Simulate sending the request to an artisan
-    console.log('Submitting request with reference:', { ...values, generatedImageUrl: generatedImage, referenceImageUrl: referenceImage });
     
-    setTimeout(() => {
+    try {
+      const requestsRef = collection(firestore, 'customizationRequests');
+      await addDoc(requestsRef, {
+        buyerId: user.uid,
+        referenceImageUrl: referenceImage,
+        generatedImageUrl: generatedImage,
+        description: values.description,
+        status: 'pending',
+        createdAt: serverTimestamp(),
+      });
+
+      toast({
+          title: translations.customize_page.requestSentToast,
+          description: translations.customize_page.requestSentDesc,
+      });
+      form.reset();
+      setReferenceImage(null);
+      setGeneratedImage(null);
+    } catch (error) {
+      console.error('Error submitting customization request:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Submission Failed',
+        description: 'Could not send your request. Please try again.',
+      });
+    } finally {
         setIsSubmitting(false);
-        toast({
-            title: translations.customize_page.requestSentToast,
-            description: translations.customize_page.requestSentDesc,
-        });
-        form.reset();
-        setReferenceImage(null);
-        setGeneratedImage(null);
-    }, 1500);
+    }
   }
 
 

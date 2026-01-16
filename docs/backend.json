@@ -82,6 +82,20 @@
         "imageUrls": { "type": "array", "items": { "type": "string" }, "description": "An array of image URLs submitted with the review." }
       },
       "required": ["rating", "reviewText", "createdAt"]
+    },
+    "CustomizationRequest": {
+      "title": "CustomizationRequest",
+      "type": "object",
+      "description": "Represents a custom design request from a buyer, using a reference image.",
+      "properties": {
+        "buyerId": { "type": "string", "description": "The UID of the buyer making the request." },
+        "referenceImageUrl": { "type": "string", "description": "The data URI of the user-uploaded reference image." },
+        "generatedImageUrl": { "type": "string", "description": "The data URI of the AI-generated image showing the requested changes." },
+        "description": { "type": "string", "description": "The buyer's description of the requested changes." },
+        "status": { "type": "string", "description": "The status of the request (e.g., 'pending', 'accepted', 'rejected')." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of request creation." }
+      },
+      "required": ["buyerId", "referenceImageUrl", "generatedImageUrl", "description", "createdAt"]
     }
   },
   "auth": {
@@ -124,6 +138,13 @@
         "definition": {
           "schema": { "$ref": "#/entities/Review" },
           "description": "Stores all reviews for products."
+        }
+      },
+      {
+        "path": "/customizationRequests/{requestId}",
+        "definition": {
+          "schema": { "$ref": "#/entities/CustomizationRequest" },
+          "description": "Stores custom design requests made by buyers using a reference image."
         }
       }
     ],

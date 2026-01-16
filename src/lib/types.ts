@@ -69,5 +69,15 @@ export type SavedAdvertisement = {
   createdAt: string;
 };
     
+export type CustomizationRequest = {
+  id?: string;
+  buyerId: string;
+  referenceImageUrl: string;
+  generatedImageUrl: string;
+  description: string;
+  status: 'pending' | 'accepted' | 'rejected';
+  createdAt: any; // for serverTimestamp
+};
 
     
+

@@ -27,7 +27,7 @@ service cloud.firestore {
     match /products/{productId} {
       // Anyone can read a product
       allow read: if true;
-      // Only an authenticated user can create a product, and they must be the artisan
+      // Only an authenticated user who is an artisan can create a product.
       allow create: if request.auth != null && request.resource.data.artisan == /databases/$(database)/documents/users/$(request.auth.uid);
       // The artisan who created the product can update or delete it, or an admin can.
       allow update, delete: if request.auth != null && (get(resource.data.artisan).id == request.auth.uid || isAdmin());
@@ -47,6 +47,13 @@ service cloud.firestore {
       allow update, delete: if false;
     }
     
+    // Buyers can create customization requests for themselves
+    match /customizationRequests/{requestId} {
+      allow create: if request.auth != null && request.resource.data.buyerId == request.auth.uid;
+      allow read: if request.auth != null && resource.data.buyerId == request.auth.uid;
+      allow update, delete: if false; // Immutable for now
+    }
+
     // Attendance, alerts, bookings, and analytics can only be accessed by admins for now
     match /attendance/{docId} {
       allow read, write: if isAdmin();
