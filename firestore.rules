@@ -55,7 +55,7 @@ service cloud.firestore {
     // Customization Requests
     match /customizationRequests/{requestId} {
       // A buyer can create a request for themselves.
-      allow create: if request.auth != null;
+      allow create: if request.auth != null && request.resource.data.buyerId == request.auth.uid;
 
       // A user can read a request if:
       // 1. They are the buyer who created it.

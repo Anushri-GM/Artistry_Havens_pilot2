@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -23,7 +22,7 @@ import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useTranslation } from '@/context/translation-context';
 import { useLanguage } from '@/context/language-context';
 import { cn } from '@/lib/utils';
-import { useUser, useFirestore } from '@/firebase';
+import { useUser, useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 const formSchema = z.object({
@@ -181,30 +180,50 @@ export default function CustomizePage() {
     try {
       const compressedGeneratedImage = await compressImage(generatedImage);
       const requestsRef = collection(firestore, 'customizationRequests');
-      await addDoc(requestsRef, {
+      
+      const newRequest = {
         buyerId: user.uid,
         generatedImageUrl: compressedGeneratedImage,
         description: values.description,
         category: values.category,
-        status: 'pending',
+        status: 'pending' as const,
         createdAt: serverTimestamp(),
-      });
+      };
 
-      toast({
-        title: t.requestSentToast,
-        description: t.requestSentDesc,
-      });
-      form.reset();
-      setGeneratedImage(null);
+      addDoc(requestsRef, newRequest)
+        .then(() => {
+          toast({
+            title: t.requestSentToast,
+            description: t.requestSentDesc,
+          });
+          form.reset();
+          setGeneratedImage(null);
+        })
+        .catch((error) => {
+          const permissionError = new FirestorePermissionError({
+            path: requestsRef.path,
+            operation: 'create',
+            requestResourceData: newRequest,
+          });
+          errorEmitter.emit('permission-error', permissionError);
+
+          toast({
+            variant: 'destructive',
+            title: 'Submission Failed',
+            description: 'Could not send your request. A permission error might have occurred.',
+          });
+        })
+        .finally(() => {
+            setIsSubmitting(false);
+        });
 
     } catch (error: any) {
-      console.error('Error submitting customization request:', error);
+      console.error('Error preparing request:', error);
       toast({
         variant: 'destructive',
         title: 'Submission Failed',
-        description: error.message || 'Could not send your request. Please try again.',
+        description: 'Could not process the image before sending.',
       });
-    } finally {
       setIsSubmitting(false);
     }
   }
