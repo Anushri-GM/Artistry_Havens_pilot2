@@ -5,8 +5,7 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
-import { googleAI } from '@genkit-ai/google-genai';
+import { z } from 'zod';
 
 const EnhanceProductImageInputSchema = z.object({
   photoDataUri: z
@@ -32,7 +31,7 @@ const enhanceProductImageFlow = ai.defineFlow(
   },
   async ({ photoDataUri }) => {
     const { media } = await ai.generate({
-      model: googleAI.model('gemini-2.5-flash-image-preview'),
+      model: 'vertexai/gemini-2.5-flash-image-preview',
       prompt: [
         { media: { url: photoDataUri } },
         { 
