@@ -1,11 +1,9 @@
-
 'use server';
 /**
  * @fileOverview An AI flow that enhances the quality of a product image.
  */
 
 import { ai } from '@/ai/genkit';
-import { googleAI } from '@genkit-ai/google-genai';
 import { z } from 'zod';
 
 const EnhanceProductImageInputSchema = z.object({
@@ -32,7 +30,7 @@ const enhanceProductImageFlow = ai.defineFlow(
   },
   async ({ photoDataUri }) => {
     const { media } = await ai.generate({
-      model: googleAI.model('gemini-1.5-flash-latest'),
+      model: 'vertexai/gemini-1.5-flash',
       prompt: [
         { media: { url: photoDataUri } },
         { 
@@ -42,9 +40,6 @@ const enhanceProductImageFlow = ai.defineFlow(
           Return only the enhanced image.`
         },
       ],
-      config: {
-        responseModalities: ['TEXT', 'IMAGE'],
-      },
     });
 
     if (!media?.url) {
