@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useRouter } from 'next/navigation';
@@ -36,7 +35,7 @@ export default function BuyerOrdersPage() {
     }
     return null;
   }, [user, firestore]);
-  const { data: buyerProfile } = useDoc<{ name: string, address?: string }>(buyerProfileRef);
+  const { data: buyerProfile } = useDoc<{ name: string, location?: string }>(buyerProfileRef);
 
 
   const ordersQuery = useMemo(() => {
@@ -67,7 +66,7 @@ export default function BuyerOrdersPage() {
         toast({ variant: 'destructive', title: "Error", description: "Missing required information to create order." });
         return;
     }
-    if (!buyerProfile.address) {
+    if (!buyerProfile.location) {
         toast({ variant: 'destructive', title: "Address Missing", description: "Please add a shipping address to your profile." });
         router.push('/buyer/profile');
         return;
@@ -90,7 +89,7 @@ export default function BuyerOrdersPage() {
             quantity: 1,
             totalAmount: request.price || 0,
             status: 'Processing' as const,
-            shippingAddress: buyerProfile.address,
+            shippingAddress: buyerProfile.location,
             paymentId: `pi_custom_${Date.now()}`,
             customizationDetails: request.description,
         };

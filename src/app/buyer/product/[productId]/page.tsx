@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
@@ -40,7 +39,7 @@ export default function BuyerProductDetailPage() {
     }
     return null;
   }, [user, firestore]);
-  const { data: buyerProfile } = useDoc<{ name: string, address?: string }>(buyerProfileRef);
+  const { data: buyerProfile } = useDoc<{ name: string, location?: string }>(buyerProfileRef);
 
 
   if (!product) {
@@ -62,7 +61,7 @@ export default function BuyerProductDetailPage() {
         return;
     }
 
-    if (!buyerProfile.address || buyerProfile.address.trim() === '') {
+    if (!buyerProfile.location || buyerProfile.location.trim() === '') {
         toast({
             variant: 'destructive',
             title: 'No Shipping Address',
@@ -99,7 +98,7 @@ export default function BuyerProductDetailPage() {
         quantity: 1,
         totalAmount: product.price,
         status: 'Processing' as const, // Default status
-        shippingAddress: buyerProfile.address,
+        shippingAddress: buyerProfile.location,
         paymentId: `pi_${new Date().getTime()}`, // Mock data
         customizationDetails: ''
       };

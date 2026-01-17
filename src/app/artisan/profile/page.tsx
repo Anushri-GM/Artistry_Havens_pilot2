@@ -23,7 +23,7 @@ import { Badge } from '@/components/ui/badge';
 const profileSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters.'),
   companyName: z.string().optional(),
-  address: z.string().optional(),
+  location: z.string().optional(),
   phone: z.string().optional(),
 });
 
@@ -46,7 +46,7 @@ function ProfilePageComponent() {
       ...artisans[0],
       companyName: 'Elena\'s Ceramics',
       rating: 4.8,
-      address: '123 Clay Street, Pottery Town, 45678',
+      location: '123 Clay Street, Pottery Town, 45678',
       phone: '987-654-3210',
       categories: [] as string[],
   });
@@ -59,7 +59,7 @@ function ProfilePageComponent() {
     defaultValues: {
       name: '',
       companyName: '',
-      address: '',
+      location: '',
       phone: '',
     },
   });
@@ -83,7 +83,7 @@ function ProfilePageComponent() {
              data = {
                 name: '',
                 companyName: '',
-                address: '',
+                location: '',
                 phone: user.phoneNumber || '',
                 categories: [],
             };
@@ -93,7 +93,7 @@ function ProfilePageComponent() {
         form.reset({
             name: data.name || '',
             companyName: data.companyName || '',
-            address: data.address || '',
+            location: data.location || '',
             phone: data.phone || user.phoneNumber || '',
         });
       }
@@ -121,7 +121,7 @@ function ProfilePageComponent() {
         const profileData = {
           name: data.name,
           companyName: data.companyName,
-          address: data.address,
+          location: data.location,
           avatarUrl: imagePreview || artisan.avatar.url,
           updatedAt: serverTimestamp(),
         };
@@ -324,7 +324,7 @@ function ProfilePageComponent() {
                     <div className="space-y-4">
                         <FormField
                             control={form.control}
-                            name="address"
+                            name="location"
                             render={({ field }) => (
                             <FormItem>
                                 <FormLabel>{t.addressLabel}</FormLabel>
@@ -353,7 +353,7 @@ function ProfilePageComponent() {
 
                 {isEditing && (
                 <div className="flex justify-end gap-2">
-                  {!isSetupMode && <Button type="button" variant="outline" onClick={() => {setIsEditing(false); form.reset({name: artisan.name, companyName: artisan.companyName, address: artisan.address, phone: artisan.phone}); setImagePreview(null);}}>{t.cancelButton}</Button>}
+                  {!isSetupMode && <Button type="button" variant="outline" onClick={() => {setIsEditing(false); form.reset({name: artisan.name, companyName: artisan.companyName, location: artisan.location, phone: artisan.phone}); setImagePreview(null);}}>{t.cancelButton}</Button>}
                   <Button type="submit" disabled={isLoading}>
                     {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                     {isSetupMode ? t.setupSaveButton : t.saveButton}

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -26,7 +25,7 @@ import { Separator } from '@/components/ui/separator';
 const profileSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters.'),
   phone: z.string().optional(),
-  address: z.string().optional(),
+  location: z.string().optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
@@ -50,14 +49,14 @@ function BuyerProfilePageComponent() {
       name: 'Buyer',
       avatarUrl: '',
       phone: '',
-      address: '',
+      location: '',
   });
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
-    defaultValues: { name: '', phone: '', address: '' },
+    defaultValues: { name: '', phone: '', location: '' },
   });
 
   useEffect(() => {
@@ -71,12 +70,12 @@ function BuyerProfilePageComponent() {
             setProfileData(prev => ({...prev, ...data}));
             if (data.avatarUrl) setImagePreview(data.avatarUrl);
         } else {
-            data = { name: '', phone: user.phoneNumber || '', address: '' };
+            data = { name: '', phone: user.phoneNumber || '', location: '' };
         }
         form.reset({
             name: data.name || '',
             phone: data.phone || user.phoneNumber || '',
-            address: data.address || '',
+            location: data.location || '',
         });
       }
     }
@@ -90,7 +89,7 @@ function BuyerProfilePageComponent() {
         const userDocRef = doc(firestore, "users", user.uid);
         const newProfileData = {
           name: data.name,
-          address: data.address,
+          location: data.location,
           avatarUrl: imagePreview || profileData.avatarUrl,
           updatedAt: serverTimestamp(),
         };
@@ -195,7 +194,7 @@ function BuyerProfilePageComponent() {
                     <div>
                         <h3 className="font-semibold mb-2">Shipping Address</h3>
                         {isEditing ? (
-                            <FormField control={form.control} name="address" render={({ field }) => (
+                            <FormField control={form.control} name="location" render={({ field }) => (
                                 <FormItem>
                                     <FormLabel className="sr-only">Shipping Address</FormLabel>
                                     <FormControl>
@@ -205,7 +204,7 @@ function BuyerProfilePageComponent() {
                                 </FormItem>
                             )} />
                         ) : (
-                            <p className="text-sm text-muted-foreground">{form.getValues('address') || 'No shipping address set. Please edit your profile to add one.'}</p>
+                            <p className="text-sm text-muted-foreground">{form.getValues('location') || 'No shipping address set. Please edit your profile to add one.'}</p>
                         )}
                     </div>
 

@@ -13,8 +13,7 @@
         "email": { "type": "string", "description": "User's email address." },
         "photoUrl": { "type": "string", "description": "URL of the user's profile picture." },
         "bio": { "type": "string", "description": "A short biography of the user." },
-        "location": { "type": "string", "description": "User's location." },
-        "address": { "type": "string", "description": "User's primary shipping address." },
+        "location": { "type": "string", "description": "User's primary shipping address." },
         "contactInfo": { "type": "string", "description": "User's contact information." },
         "categories": {
           "type": "array",
@@ -75,9 +74,10 @@
         "quantity": { "type": "integer", "description": "The quantity of the product ordered." },
         "productName": { "type": "string", "description": "Denormalized name of the product for easier display." },
         "productImageUrl": { "type": "string", "description": "Denormalized image URL of the product." },
-        "buyerName": { "type": "string", "description": "Denormalized name of the buyer for easier display." }
+        "buyerName": { "type": "string", "description": "Denormalized name of the buyer for easier display." },
+        "artisanName": { "type": "string", "description": "Denormalized name of the artisan for easier display." }
       },
-      "required": ["orderDate", "totalAmount", "status", "createdAt", "updatedAt", "buyer", "artisan", "product", "quantity", "productName", "productImageUrl", "buyerName"]
+      "required": ["orderDate", "totalAmount", "status", "createdAt", "updatedAt", "buyer", "artisan", "quantity", "productName", "productImageUrl", "buyerName", "artisanName"]
     },
     "Review": {
       "title": "Review",
@@ -166,3 +166,4 @@
     "reasoning": "This Firestore data structure is designed around the new schema. It uses top-level collections for major entities like Users, Products, Orders, and Reviews for easier querying. Customization options are nested under their respective products. User-specific data is keyed by the Firebase Auth UID to ensure a direct and secure link between authentication and user data."
   }
 }
+
