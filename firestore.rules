@@ -54,8 +54,10 @@ service cloud.firestore {
     
     // Customization Requests
     match /CustomizationRequest/{requestId} {
-      // A buyer can create a request for themselves.
-      allow create: if request.auth != null && request.resource.data.buyerId == request.auth.uid;
+      // A buyer can create a request for themselves, and MUST include the generated image.
+      allow create: if request.auth != null 
+                    && request.resource.data.buyerId == request.auth.uid
+                    && 'generatedImageUrl' in request.resource.data;
 
       // An authenticated user can list requests. Client-side queries MUST be secure.
       allow list: if request.auth != null;
@@ -74,6 +76,7 @@ service cloud.firestore {
           (isArtisan() && resource.data.status == 'pending'
            && request.resource.data.status == 'quoted'
            && request.resource.data.artisanId == request.auth.uid
+           && 'artisanName' in request.resource.data
            && request.resource.data.price > 0)
           ||
           // Buyer accepts or rejects a quoted offer
