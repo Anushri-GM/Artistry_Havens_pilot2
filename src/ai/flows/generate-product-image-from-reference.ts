@@ -4,6 +4,7 @@
  */
 
 import { ai } from '@/ai/genkit';
+import { googleAI } from '@genkit-ai/google-genai';
 import { z } from 'zod';
 
 const GenerateProductImageFromReferenceInputSchema = z.object({
@@ -30,11 +31,14 @@ const generateProductImageFromReferenceFlow = ai.defineFlow(
   async ({ prompt, referenceImageUrl }) => {
     
     const { media } = await ai.generate({
-      model: 'vertexai/gemini-1.5-flash',
+      model: googleAI.model('gemini-2.5-flash-image-preview'),
       prompt: [
         { media: { url: referenceImageUrl } },
         { text: `Based on the provided image, generate a new photorealistic image of a handmade artisan craft with the following modifications: "${prompt}". The new image should be well-lit, on a clean background, as if for an e-commerce product page. Return ONLY the new image.` },
       ],
+      config: {
+        responseModalities: ['TEXT', 'IMAGE'],
+      },
     });
 
     if (!media?.url) {
