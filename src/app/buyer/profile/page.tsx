@@ -19,11 +19,14 @@ import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Loader2 } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { Separator } from '@/components/ui/separator';
 
 
 const profileSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters.'),
   phone: z.string().optional(),
+  address: z.string().optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
@@ -46,14 +49,15 @@ function BuyerProfilePageComponent() {
   const [profileData, setProfileData] = useState({
       name: 'Buyer',
       avatarUrl: '',
-      phone: ''
+      phone: '',
+      address: '',
   });
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
-    defaultValues: { name: '', phone: '' },
+    defaultValues: { name: '', phone: '', address: '' },
   });
 
   useEffect(() => {
@@ -67,11 +71,12 @@ function BuyerProfilePageComponent() {
             setProfileData(prev => ({...prev, ...data}));
             if (data.avatarUrl) setImagePreview(data.avatarUrl);
         } else {
-            data = { name: '', phone: user.phoneNumber || '' };
+            data = { name: '', phone: user.phoneNumber || '', address: '' };
         }
         form.reset({
             name: data.name || '',
             phone: data.phone || user.phoneNumber || '',
+            address: data.address || '',
         });
       }
     }
@@ -85,6 +90,7 @@ function BuyerProfilePageComponent() {
         const userDocRef = doc(firestore, "users", user.uid);
         const newProfileData = {
           name: data.name,
+          address: data.address,
           avatarUrl: imagePreview || profileData.avatarUrl,
           updatedAt: serverTimestamp(),
         };
@@ -182,6 +188,25 @@ function BuyerProfilePageComponent() {
                             )}
                              <p className="text-sm text-muted-foreground">{user?.phoneNumber}</p>
                         </div>
+                    </div>
+                    
+                    <Separator />
+                    
+                    <div>
+                        <h3 className="font-semibold mb-2">Shipping Address</h3>
+                        {isEditing ? (
+                            <FormField control={form.control} name="address" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="sr-only">Shipping Address</FormLabel>
+                                    <FormControl>
+                                        <Textarea {...field} placeholder="Enter your full shipping address..." />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )} />
+                        ) : (
+                            <p className="text-sm text-muted-foreground">{form.getValues('address') || 'No shipping address set. Please edit your profile to add one.'}</p>
+                        )}
                     </div>
 
                     {isEditing && (

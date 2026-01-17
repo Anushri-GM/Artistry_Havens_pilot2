@@ -15,6 +15,7 @@ import { useTranslation } from '@/context/translation-context';
 import type { Product } from '@/lib/types';
 import { useUser, useFirestore, useDoc } from '@/firebase';
 import { collection, addDoc, serverTimestamp, doc } from 'firebase/firestore';
+import { ToastAction } from "@/components/ui/toast";
 
 
 export default function BuyerProductDetailPage() {
@@ -39,7 +40,7 @@ export default function BuyerProductDetailPage() {
     }
     return null;
   }, [user, firestore]);
-  const { data: buyerProfile } = useDoc<{ name: string }>(buyerProfileRef);
+  const { data: buyerProfile } = useDoc<{ name: string, address?: string }>(buyerProfileRef);
 
 
   if (!product) {
@@ -58,6 +59,16 @@ export default function BuyerProductDetailPage() {
 
     if (!buyerProfile) {
         toast({ title: 'Profile not loaded', description: 'Please wait a moment and try again.'});
+        return;
+    }
+
+    if (!buyerProfile.address || buyerProfile.address.trim() === '') {
+        toast({
+            variant: 'destructive',
+            title: 'No Shipping Address',
+            description: 'Please add a shipping address to your profile before placing an order.',
+            action: <ToastAction altText="Go to profile" onClick={() => router.push('/buyer/profile')}>Go to Profile</ToastAction>,
+        });
         return;
     }
     
@@ -88,7 +99,7 @@ export default function BuyerProductDetailPage() {
         quantity: 1,
         totalAmount: product.price,
         status: 'Processing' as const, // Default status
-        shippingAddress: '123 Buyer Lane, Shopper City, 110001', // Mock data
+        shippingAddress: buyerProfile.address,
         paymentId: `pi_${new Date().getTime()}`, // Mock data
         customizationDetails: ''
       };
