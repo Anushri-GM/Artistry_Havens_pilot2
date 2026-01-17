@@ -76,9 +76,11 @@ export type CustomizationRequest = {
   generatedImageUrl: string;
   description: string;
   category: string;
-  status: 'pending' | 'accepted' | 'rejected';
+  status: 'pending' | 'quoted' | 'accepted' | 'rejected';
   createdAt: any; // for serverTimestamp
   artisanId?: string;
+  artisanName?: string;
+  price?: number;
 };
 
 export type Order = {
@@ -100,5 +102,6 @@ export type Order = {
   createdAt: any; // serverTimestamp
   updatedAt: any; // serverTimestamp
 };
+
 
 

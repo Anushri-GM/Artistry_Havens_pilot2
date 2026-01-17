@@ -68,13 +68,19 @@ service cloud.firestore {
         (isArtisan() && resource.data.category in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.categories)
       );
 
-      // An artisan can update a request to accept it if:
-      // 1. The request is currently pending.
-      // 2. The artisan is assigning themselves to the request.
-      allow update: if request.auth != null && isArtisan()
-                    && resource.data.status == 'pending'
-                    && request.resource.data.status == 'accepted'
-                    && request.resource.data.artisanId == request.auth.uid;
+      // An artisan can make an offer, or a buyer can accept/reject it.
+      allow update: if request.auth != null && (
+          // Artisan makes an offer on a pending request
+          (isArtisan() && resource.data.status == 'pending'
+           && request.resource.data.status == 'quoted'
+           && request.resource.data.artisanId == request.auth.uid
+           && request.resource.data.price > 0)
+          ||
+          // Buyer accepts or rejects a quoted offer
+          (resource.data.buyerId == request.auth.uid
+           && resource.data.status == 'quoted'
+           && (request.resource.data.status == 'accepted' || request.resource.data.status == 'rejected'))
+      );
                     
       allow delete: if false; // Immutable for now
     }

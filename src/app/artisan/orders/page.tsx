@@ -16,6 +16,9 @@ import { useTranslation } from '@/context/translation-context';
 import TutorialDialog from '@/components/tutorial-dialog';
 import { useUser, useFirestore, useCollection, useDoc } from '@/firebase';
 import { collection, query, where, doc, updateDoc, Timestamp } from 'firebase/firestore';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 type OrderStatus = 'Processing' | 'Shipped' | 'Delivered';
 
@@ -29,9 +32,11 @@ export default function OrdersPage() {
   const firestore = useFirestore();
 
   const [declinedRequests, setDeclinedRequests] = useState<string[]>([]);
-  const [isAccepting, setIsAccepting] = useState<string | null>(null);
+  const [requestToPrice, setRequestToPrice] = useState<CustomizationRequest | null>(null);
+  const [isSubmittingOffer, setIsSubmittingOffer] = useState(false);
+  const [offerPrice, setOfferPrice] = useState('');
 
-  // Fetch artisan data to get their specialized categories
+  // Fetch artisan data to get their specialized categories and name
   const artisanDocRef = useMemo(() => {
     if (user && firestore) {
       const docRef = doc(firestore, 'users', user.uid);
@@ -40,7 +45,7 @@ export default function OrdersPage() {
     }
     return null;
   }, [user, firestore]);
-  const { data: artisanData } = useDoc<{ categories: string[] }>(artisanDocRef);
+  const { data: artisanData } = useDoc<{ categories: string[]; name: string }>(artisanDocRef);
   
   // Fetch custom requests based on artisan's categories
   const requestsQuery = useMemo(() => {
@@ -85,26 +90,34 @@ export default function OrdersPage() {
     setDeclinedRequests(storedDeclined);
   }, []);
 
-  const handleAccept = async (request: CustomizationRequest) => {
-    if (!firestore || !user || !request.id) return;
-    setIsAccepting(request.id);
-    const requestRef = doc(firestore, 'CustomizationRequest', request.id);
+  const handleMakeOffer = async () => {
+    if (!firestore || !user || !requestToPrice?.id || !artisanData?.name) return;
+    const price = parseFloat(offerPrice);
+    if (isNaN(price) || price <= 0) {
+        toast({ variant: 'destructive', title: t.invalidPrice, description: t.invalidPriceDesc });
+        return;
+    }
+
+    setIsSubmittingOffer(true);
+    const requestRef = doc(firestore, 'CustomizationRequest', requestToPrice.id);
     try {
         await updateDoc(requestRef, {
-            status: 'accepted',
-            artisanId: user.uid
+            status: 'quoted',
+            price: price,
+            artisanId: user.uid,
+            artisanName: artisanData.name
         });
         toast({
-            title: "Request Accepted!",
-            description: "You can now begin working on this custom order."
+            title: t.offerSent,
+            description: t.offerSentDesc
         });
-        // The real-time listener of useCollection will automatically remove it from the list.
-        // A next step would be to add this to the "My Orders" tab.
+        setRequestToPrice(null);
+        setOfferPrice('');
     } catch (error) {
-        console.error("Error accepting request: ", error);
-        toast({ variant: 'destructive', title: "Error", description: "Could not accept the request." });
+        console.error("Error making offer: ", error);
+        toast({ variant: 'destructive', title: "Error", description: "Could not send the offer." });
     } finally {
-        setIsAccepting(null);
+        setIsSubmittingOffer(false);
     }
   };
 
@@ -209,15 +222,14 @@ export default function OrdersPage() {
                 />
                </div>
               <div className="flex-1">
-                <CardTitle className="text-md font-headline mb-1 leading-tight">Custom Design Request</CardTitle>
+                <CardTitle className="text-md font-headline mb-1 leading-tight">{t.customRequestTitle}</CardTitle>
                 <p className="text-sm text-muted-foreground line-clamp-3">{request.description}</p>
               </div>
               <div className="flex flex-col gap-2 mt-0 w-auto">
-                <Button onClick={() => handleAccept(request)} size="sm" className="whitespace-nowrap" disabled={isAccepting === request.id}>
-                  {isAccepting === request.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
-                  {t.acceptButton}
+                <Button onClick={() => setRequestToPrice(request)} size="sm" className="whitespace-nowrap">
+                   {t.makeOfferButton}
                 </Button>
-                <Button onClick={() => handleDecline(request.id!)} variant="outline" size="sm" className="whitespace-nowrap" disabled={!!isAccepting}>
+                <Button onClick={() => handleDecline(request.id!)} variant="outline" size="sm" className="whitespace-nowrap">
                   <X className="mr-2 h-4 w-4" /> {t.declineButton}
                 </Button>
               </div>
@@ -229,65 +241,98 @@ export default function OrdersPage() {
   };
 
   return (
-    <div className="container mx-auto p-4 relative">
-      <TutorialDialog pageId="orders" />
-      <header className="mb-6 mt-12">
-        <h1 className="font-headline text-3xl font-bold">{t.title}</h1>
-        <p className="text-sm text-muted-foreground">{t.description}</p>
-      </header>
+    <>
+      <div className="container mx-auto p-4 relative">
+        <TutorialDialog pageId="orders" />
+        <header className="mb-6 mt-12">
+          <h1 className="font-headline text-3xl font-bold">{t.title}</h1>
+          <p className="text-sm text-muted-foreground">{t.description}</p>
+        </header>
 
-      <Tabs defaultValue="requests" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="requests">{t.orderRequestsTab}</TabsTrigger>
-          <TabsTrigger value="my-orders">{t.myOrdersTab}</TabsTrigger>
-        </TabsList>
-        <TabsContent value="requests" className="mt-4">
-          {renderRequests()}
-        </TabsContent>
-        <TabsContent value="my-orders" className="mt-4">
-           <Accordion type="multiple" defaultValue={['processing']} className="w-full space-y-2">
-            <Card>
-                <AccordionItem value="processing" className="border-b-0">
-                    <AccordionTrigger className="p-4 hover:no-underline">
-                        <div className="flex items-center gap-2">
-                           <Package className="h-5 w-5" /> 
-                           <span className="font-semibold">{t.processingTab}</span>
-                        </div>
-                    </AccordionTrigger>
-                    <AccordionContent className="p-4 pt-0">
-                        {renderOrderList('Processing')}
-                    </AccordionContent>
-                </AccordionItem>
-            </Card>
-            <Card>
-                 <AccordionItem value="shipped" className="border-b-0">
-                    <AccordionTrigger className="p-4 hover:no-underline">
-                        <div className="flex items-center gap-2">
-                           <Ship className="h-5 w-5" /> 
-                           <span className="font-semibold">{t.shippedTab}</span>
-                        </div>
-                    </AccordionTrigger>
-                    <AccordionContent className="p-4 pt-0">
-                        {renderOrderList('Shipped')}
-                    </AccordionContent>
-                </AccordionItem>
-            </Card>
-            <Card>
-                 <AccordionItem value="delivered" className="border-b-0">
-                    <AccordionTrigger className="p-4 hover:no-underline">
-                        <div className="flex items-center gap-2">
-                           <CheckCircle className="h-5 w-5" /> 
-                           <span className="font-semibold">{t.deliveredTab}</span>
-                        </div>
-                    </AccordionTrigger>
-                    <AccordionContent className="p-4 pt-0">
-                        {renderOrderList('Delivered')}
-                    </AccordionContent>
-                </AccordionItem>
-            </Card>
-           </Accordion>
-        </TabsContent>
-      </Tabs>
-    </div>
+        <Tabs defaultValue="requests" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="requests">{t.orderRequestsTab}</TabsTrigger>
+            <TabsTrigger value="my-orders">{t.myOrdersTab}</TabsTrigger>
+          </TabsList>
+          <TabsContent value="requests" className="mt-4">
+            {renderRequests()}
+          </TabsContent>
+          <TabsContent value="my-orders" className="mt-4">
+            <Accordion type="multiple" defaultValue={['processing']} className="w-full space-y-2">
+              <Card>
+                  <AccordionItem value="processing" className="border-b-0">
+                      <AccordionTrigger className="p-4 hover:no-underline">
+                          <div className="flex items-center gap-2">
+                            <Package className="h-5 w-5" /> 
+                            <span className="font-semibold">{t.processingTab}</span>
+                          </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="p-4 pt-0">
+                          {renderOrderList('Processing')}
+                      </AccordionContent>
+                  </AccordionItem>
+              </Card>
+              <Card>
+                  <AccordionItem value="shipped" className="border-b-0">
+                      <AccordionTrigger className="p-4 hover:no-underline">
+                          <div className="flex items-center gap-2">
+                            <Ship className="h-5 w-5" /> 
+                            <span className="font-semibold">{t.shippedTab}</span>
+                          </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="p-4 pt-0">
+                          {renderOrderList('Shipped')}
+                      </AccordionContent>
+                  </AccordionItem>
+              </Card>
+              <Card>
+                  <AccordionItem value="delivered" className="border-b-0">
+                      <AccordionTrigger className="p-4 hover:no-underline">
+                          <div className="flex items-center gap-2">
+                            <CheckCircle className="h-5 w-5" /> 
+                            <span className="font-semibold">{t.deliveredTab}</span>
+                          </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="p-4 pt-0">
+                          {renderOrderList('Delivered')}
+                      </AccordionContent>
+                  </AccordionItem>
+              </Card>
+            </Accordion>
+          </TabsContent>
+        </Tabs>
+      </div>
+
+      <Dialog open={!!requestToPrice} onOpenChange={(open) => !open && setRequestToPrice(null)}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>{t.makeOfferTitle}</DialogTitle>
+                <DialogDescription>{t.makeOfferDesc}</DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="price" className="text-right">
+                        {t.priceLabel} (₹)
+                    </Label>
+                    <Input
+                        id="price"
+                        type="number"
+                        value={offerPrice}
+                        onChange={(e) => setOfferPrice(e.target.value)}
+                        className="col-span-3"
+                        placeholder="e.g., 500"
+                    />
+                </div>
+            </div>
+            <DialogFooter>
+                <Button variant="outline" onClick={() => setRequestToPrice(null)}>{t.cancelButton}</Button>
+                <Button onClick={handleMakeOffer} disabled={isSubmittingOffer}>
+                    {isSubmittingOffer && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {t.sendOfferButton}
+                </Button>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
