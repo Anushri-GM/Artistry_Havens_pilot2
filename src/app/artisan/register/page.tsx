@@ -98,7 +98,7 @@ export default function ArtisanRegisterPage() {
     await setDoc(userRef, {
         uid: user.uid,
         phone: user.phoneNumber,
-        role: 'artisan',
+        userType: 'artisan',
         createdAt: serverTimestamp(),
     }, { merge: true });
   }

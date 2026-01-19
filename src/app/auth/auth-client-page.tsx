@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -99,7 +98,7 @@ function AuthClientPageComponent() {
     await setDoc(userRef, {
         uid: user.uid,
         phone: user.phoneNumber,
-        role: userType,
+        userType: userType,
         createdAt: serverTimestamp(),
     }, { merge: true });
   }
