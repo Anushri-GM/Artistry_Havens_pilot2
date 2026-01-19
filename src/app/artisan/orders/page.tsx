@@ -73,7 +73,7 @@ export default function OrdersPage() {
   const isLoading = isUserLoading || areOrdersLoading || isLoadingRequests;
 
 
-  const handleAcceptRequest = async (request: CustomizationRequest) => {
+  const handleAcceptRequest = (request: CustomizationRequest) => {
     if (!user || !firestore || !request.id || !artisanData?.name) return;
     
     setIsAccepting(request.id);
@@ -99,47 +99,58 @@ export default function OrdersPage() {
     const ordersCollectionRef = collection(firestore, 'orders');
     const requestRef = doc(firestore, 'CustomizationRequest', request.id);
 
-    try {
-        await addDoc(ordersCollectionRef, newOrder);
-        await deleteDoc(requestRef);
-
-        toast({
-            title: t.orderAcceptedToast,
-            description: "The request has been converted to an order in 'My Orders'.",
+    addDoc(ordersCollectionRef, newOrder)
+        .then(() => {
+            // If adding the order succeeds, then delete the request.
+            deleteDoc(requestRef)
+            .then(() => {
+                toast({
+                    title: t.orderAcceptedToast,
+                    description: "The request has been converted to an order in 'My Orders'.",
+                });
+            })
+            .catch((deleteError) => {
+                const permissionError = new FirestorePermissionError({
+                    path: requestRef.path,
+                    operation: 'delete',
+                });
+                errorEmitter.emit('permission-error', permissionError);
+            });
+        })
+        .catch((addError) => {
+            const permissionError = new FirestorePermissionError({
+                path: ordersCollectionRef.path,
+                operation: 'create',
+                requestResourceData: newOrder,
+            });
+            errorEmitter.emit('permission-error', permissionError);
+        })
+        .finally(() => {
+            setIsAccepting(null);
         });
-
-    } catch (error: any) {
-        console.error("Error accepting request: ", error);
-        toast({
-            variant: "destructive",
-            title: "Error Accepting Request",
-            description: "Could not create the order. Please check permissions and try again."
-        });
-        const permissionError = new FirestorePermissionError({
-            path: ordersCollectionRef.path,
-            operation: 'create',
-            requestResourceData: newOrder
-        });
-        errorEmitter.emit('permission-error', permissionError);
-    } finally {
-        setIsAccepting(null);
-    }
   };
 
-  const handleDecline = async (requestId: string) => {
+  const handleDecline = (requestId: string) => {
     if (!firestore || !requestId) return;
     const requestRef = doc(firestore, 'CustomizationRequest', requestId);
-    try {
-        await updateDoc(requestRef, { status: 'rejected' });
-        toast({
-          variant: 'destructive',
-          title: "Request Declined",
-          description: "The custom design request has been declined.",
+    const updateData = { status: 'rejected' };
+    
+    updateDoc(requestRef, updateData)
+        .then(() => {
+             toast({
+                variant: 'destructive',
+                title: "Request Declined",
+                description: "The custom design request has been declined.",
+            });
+        })
+        .catch((error) => {
+            const permissionError = new FirestorePermissionError({
+                path: requestRef.path,
+                operation: 'update',
+                requestResourceData: updateData
+            });
+            errorEmitter.emit('permission-error', permissionError);
         });
-    } catch (error) {
-        console.error("Error declining request:", error);
-        toast({ variant: 'destructive', title: 'Error', description: 'Could not decline the request.' });
-    }
   };
 
   const handleUpdate = (orderId: string) => {
