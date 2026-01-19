@@ -90,14 +90,26 @@ service cloud.firestore {
 
     // Rules for Orders
     match /orders/{orderId} {
-      // A buyer can create an order, and the buyer ID must match their own.
-      allow create: if request.auth != null 
-                    && request.resource.data.buyer == /databases/$(database)/documents/users/$(request.auth.uid)
-                    && 'artisanName' in request.resource.data
-                    && 'buyerName' in request.resource.data
-                    && 'productName' in request.resource.data
-                    && 'productImageUrl' in request.resource.data
-                    && 'totalAmount' in request.resource.data;
+      // A buyer can create an order. The rule validates both standard and custom orders.
+      allow create: if request.auth != null &&
+                    request.resource.data.buyer == /databases/$(database)/documents/users/$(request.auth.uid) &&
+                    request.resource.data.status == 'Processing' &&
+                    request.resource.data.totalAmount > 0 &&
+                    request.resource.data.quantity > 0 &&
+                    request.resource.data.shippingAddress != null && request.resource.data.shippingAddress != "" &&
+                    'buyerName' in request.resource.data &&
+                    'artisanName' in request.resource.data &&
+                    'productName' in request.resource.data &&
+                    'productImageUrl' in request.resource.data &&
+                    (
+                      // Standard product order: has a product ref, customizationDetails is absent or empty.
+                      (request.resource.data.product != null &&
+                       get(request.resource.data.product).data != null &&
+                       (!('customizationDetails' in request.resource.data) || request.resource.data.customizationDetails == "")) ||
+                      // Custom product order: product ref is null, customizationDetails is present and not empty.
+                      (request.resource.data.product == null &&
+                       'customizationDetails' in request.resource.data && request.resource.data.customizationDetails != "")
+                    );
 
       // The buyer who placed the order or the artisan fulfilling it can get the document.
       allow get: if request.auth != null && (

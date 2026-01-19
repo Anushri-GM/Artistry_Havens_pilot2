@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
@@ -100,7 +101,6 @@ export default function BuyerProductDetailPage() {
         status: 'Processing' as const, // Default status
         shippingAddress: buyerProfile.location,
         paymentId: `pi_${new Date().getTime()}`, // Mock data
-        customizationDetails: ''
       };
 
       await addDoc(ordersRef, newOrder);

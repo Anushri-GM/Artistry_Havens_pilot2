@@ -66,7 +66,7 @@
         "updatedAt": { "type": "string", "format": "date-time", "description": "Timestamp of the last order update." },
         "buyer": { "$ref": "#/entities/User", "description": "A reference to the buyer who placed the order." },
         "artisan": { "$ref": "#/entities/User", "description": "A reference to the artisan fulfilling the order." },
-        "product": { "$ref": "#/entities/Product", "description": "A reference to the product that was ordered." },
+        "product": { "$ref": "#/entities/Product", "description": "A reference to the product that was ordered. This can be null for custom orders." },
         "shippingAddress": { "type": "string", "description": "The shipping address for the order." },
         "paymentId": { "type": "string", "description": "The identifier for the payment transaction." },
         "customizationDetails": { "type": "string", "description": "Details about any customizations requested for the product." },
@@ -165,4 +165,3 @@
     "reasoning": "This Firestore data structure is designed around the new schema. It uses top-level collections for major entities like Users, Products, Orders, and Reviews for easier querying. Customization options are nested under their respective products. User-specific data is keyed by the Firebase Auth UID to ensure a direct and secure link between authentication and user data."
   }
 }
-
