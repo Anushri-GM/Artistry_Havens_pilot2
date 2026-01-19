@@ -24,7 +24,8 @@ service cloud.firestore {
              && 'generatedImageUrl' in data
              && data.price > 0
              && data.buyerName.size() > 0
-             && data.buyerShippingAddress.size() > 0;
+             && data.buyerShippingAddress.size() > 0
+             && data.description.size() > 0;
     }
 
     // Users can read their own profile. Admins can read any profile.
