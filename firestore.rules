@@ -136,11 +136,8 @@ service cloud.firestore {
       allow create: if request.auth != null;
 
       // Only the recipient can get or update their notification.
+      // The `get` permission also implicitly secures `list` queries that filter by `userId`.
       allow get, update: if request.auth != null && resource.data.userId == request.auth.uid;
-      
-      // An authenticated user can list their own notifications.
-      // The client-side query must filter by `userId`.
-      allow list: if request.auth != null;
 
       // Users cannot delete notifications.
       allow delete: if false;
