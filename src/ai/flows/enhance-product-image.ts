@@ -31,7 +31,7 @@ const enhanceProductImageFlow = ai.defineFlow(
   },
   async ({ photoDataUri }) => {
     const { media } = await ai.generate({
-      model: vertexAI.model('gemini-2.5-flash-image-preview'),
+      model: vertexAI.model('imagen-3.0-generate-preview'),
       prompt: [
         { media: { url: photoDataUri } },
         { 
