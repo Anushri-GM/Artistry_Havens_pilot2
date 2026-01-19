@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useUser, useFirestore, useCollection, useDoc } from '@/firebase';
+import { useUser, useFirestore, useCollection, useDoc, errorEmitter, FirestorePermissionError } from '@/firebase';
 import type { Order, CustomizationRequest } from '@/lib/types';
 import { useState, useMemo } from 'react';
 import Image from 'next/image';
@@ -61,7 +61,7 @@ export default function BuyerOrdersPage() {
 
   const isLoading = isUserLoading || areOrdersLoading || areRequestsLoading;
 
-  const handleAcceptQuote = async (request: CustomizationRequest) => {
+  const handleAcceptQuote = (request: CustomizationRequest) => {
     if (!user || !firestore || !request.id || !request.artisanId || !buyerProfile) {
         toast({ variant: 'destructive', title: "Error", description: "Missing required information to create order." });
         return;
@@ -73,55 +73,82 @@ export default function BuyerOrdersPage() {
     }
 
     setIsSubmitting(request.id);
-    try {
-        // 1. Create the new order
-        const newOrder = {
-            artisan: doc(firestore, 'users', request.artisanId),
-            buyer: doc(firestore, 'users', user.uid),
-            product: null, // This is a custom product, no reference
-            orderDate: serverTimestamp(),
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-            productName: `Custom: ${request.description.substring(0, 30)}...`,
-            productImageUrl: request.generatedImageUrl,
-            buyerName: buyerProfile.name || 'Valued Customer',
-            artisanName: request.artisanName || 'Artisan',
-            quantity: 1,
-            totalAmount: request.price || 0,
-            status: 'Processing' as const,
-            shippingAddress: buyerProfile.location,
-            paymentId: `pi_custom_${Date.now()}`,
-            customizationDetails: request.description,
-        };
-        await addDoc(collection(firestore, 'orders'), newOrder);
 
-        // 2. Update the request status
-        const requestRef = doc(firestore, 'CustomizationRequest', request.id);
-        await updateDoc(requestRef, { status: 'accepted' });
+    const newOrder = {
+        artisan: doc(firestore, 'users', request.artisanId),
+        buyer: doc(firestore, 'users', user.uid),
+        product: null,
+        orderDate: serverTimestamp(),
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        productName: `Custom: ${request.description.substring(0, 30)}...`,
+        productImageUrl: request.generatedImageUrl,
+        buyerName: buyerProfile.name || 'Valued Customer',
+        artisanName: request.artisanName || 'Artisan',
+        quantity: 1,
+        totalAmount: request.price || 0,
+        status: 'Processing' as const,
+        shippingAddress: buyerProfile.location,
+        paymentId: `pi_custom_${Date.now()}`,
+        customizationDetails: request.description,
+    };
+    const ordersCollectionRef = collection(firestore, 'orders');
 
-        toast({ title: t_orders.quoteAccepted, description: t_orders.orderCreated });
-
-    } catch (error) {
-        console.error("Error accepting quote: ", error);
-        toast({ variant: 'destructive', title: "Error", description: "Could not accept the offer." });
-    } finally {
-        setIsSubmitting(null);
-    }
+    addDoc(ordersCollectionRef, newOrder)
+        .then(() => {
+            const requestRef = doc(firestore, 'CustomizationRequest', request.id!);
+            const updateData = { status: 'accepted' as const };
+            updateDoc(requestRef, updateData)
+                .then(() => {
+                    toast({ title: t_orders.quoteAccepted, description: t_orders.orderCreated });
+                    setIsSubmitting(null);
+                })
+                .catch((error) => {
+                    const permissionError = new FirestorePermissionError({
+                        path: requestRef.path,
+                        operation: 'update',
+                        requestResourceData: updateData,
+                    });
+                    errorEmitter.emit('permission-error', permissionError);
+                    toast({ variant: 'destructive', title: "Error", description: "Order placed, but failed to update request status." });
+                    setIsSubmitting(null);
+                });
+        })
+        .catch((error) => {
+            const permissionError = new FirestorePermissionError({
+                path: ordersCollectionRef.path,
+                operation: 'create',
+                requestResourceData: newOrder,
+            });
+            errorEmitter.emit('permission-error', permissionError);
+            toast({ variant: 'destructive', title: "Error", description: "Could not create the order due to a permission issue." });
+            setIsSubmitting(null);
+        });
   };
 
-  const handleRejectQuote = async (requestId: string) => {
+  const handleRejectQuote = (requestId: string) => {
     if (!firestore || !requestId) return;
     setIsSubmitting(requestId);
-    try {
-        const requestRef = doc(firestore, 'CustomizationRequest', requestId);
-        await updateDoc(requestRef, { status: 'rejected' });
-        toast({ variant: 'destructive', title: t_orders.quoteRejected });
-    } catch (error) {
-        console.error("Error rejecting quote: ", error);
-        toast({ variant: 'destructive', title: "Error", description: "Could not reject the offer." });
-    } finally {
-        setIsSubmitting(null);
-    }
+
+    const requestRef = doc(firestore, 'CustomizationRequest', requestId);
+    const updateData = { status: 'rejected' as const };
+
+    updateDoc(requestRef, updateData)
+        .then(() => {
+            toast({ variant: 'destructive', title: t_orders.quoteRejected });
+        })
+        .catch((error) => {
+            const permissionError = new FirestorePermissionError({
+                path: requestRef.path,
+                operation: 'update',
+                requestResourceData: updateData,
+            });
+            errorEmitter.emit('permission-error', permissionError);
+            toast({ variant: 'destructive', title: "Error", description: "Could not reject the offer due to a permission issue." });
+        })
+        .finally(() => {
+            setIsSubmitting(null);
+        });
   };
 
   return (
