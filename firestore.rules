@@ -74,8 +74,8 @@ service cloud.firestore {
                     && request.resource.data.buyerId == request.auth.uid
                     && 'generatedImageUrl' in request.resource.data
                     && request.resource.data.price > 0
-                    && 'buyerName' in request.resource.data && request.resource.data.buyerName != ""
-                    && 'buyerShippingAddress' in request.resource.data && request.resource.data.buyerShippingAddress != "";
+                    && 'buyerName' in request.resource.data && request.resource.data.buyerName.size() > 0
+                    && 'buyerShippingAddress' in request.resource.data && request.resource.data.buyerShippingAddress.size() > 0;
 
       // An authenticated user can list requests. Client-side queries MUST be secure.
       allow list: if request.auth != null;
