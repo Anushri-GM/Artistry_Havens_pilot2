@@ -24,7 +24,7 @@ service cloud.firestore {
       allow create: if request.auth != null && request.auth.uid == userId;
       allow update: if request.auth != null && 
                      (
-                       (request.auth.uid == userId && (!('role' in request.resource.data) || request.resource.data.role == resource.data.role)) ||
+                       (request.auth.uid == userId && (!('role' in request.resource.data) || request.resource.data.role == resource.data.role) && (!('userType' in request.resource.data) || request.resource.data.userType == resource.data.userType)) ||
                        isAdmin()
                      );
       allow delete: if isAdmin();
@@ -132,10 +132,16 @@ service cloud.firestore {
 
     // Rules for Notifications
     match /notifications/{notificationId} {
-      // Any authenticated user can create a notification (e.g., a buyer notifying artisans).
+      // Any authenticated user can create a notification.
       allow create: if request.auth != null;
-      // Only the intended recipient can read or update (e.g., mark as read) their notification.
-      allow read, update: if request.auth != null && resource.data.userId == request.auth.uid;
+
+      // Only the recipient can get or update their notification.
+      allow get, update: if request.auth != null && resource.data.userId == request.auth.uid;
+      
+      // An authenticated user can list their own notifications.
+      // The client-side query must filter by `userId`.
+      allow list: if request.auth != null;
+
       // Users cannot delete notifications.
       allow delete: if false;
     }
