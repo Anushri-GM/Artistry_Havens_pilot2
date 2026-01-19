@@ -9,9 +9,11 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // Helper function to check if the user is an artisan
+    // Helper function to check if the user is an artisan.
+    // Checks for both the new `userType` and the legacy `role` field for backward compatibility.
     function isArtisan() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType == 'artisan';
+      let userData = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      return userData.userType == 'artisan' || userData.role == 'artisan';
     }
 
     // Users can read their own profile. Admins can read any profile.
