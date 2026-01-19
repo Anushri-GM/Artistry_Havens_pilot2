@@ -15,7 +15,7 @@ import type { Order, CustomizationRequest } from '@/lib/types';
 import { useTranslation } from '@/context/translation-context';
 import TutorialDialog from '@/components/tutorial-dialog';
 import { useUser, useFirestore, useCollection, useDoc, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { collection, query, where, doc, updateDoc, Timestamp, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, doc, updateDoc, Timestamp, addDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
 
 type OrderStatus = 'Processing' | 'Shipped' | 'Delivered';
 
@@ -78,7 +78,6 @@ export default function OrdersPage() {
     
     setIsAccepting(request.id);
     
-    // 1. Create a new Order document
     const newOrder = {
         artisan: doc(firestore, 'users', user.uid),
         buyer: doc(firestore, 'users', request.buyerId),
@@ -98,21 +97,15 @@ export default function OrdersPage() {
         customizationDetails: request.description,
     };
     const ordersCollectionRef = collection(firestore, 'orders');
+    const requestRef = doc(firestore, 'CustomizationRequest', request.id);
 
     try {
         await addDoc(ordersCollectionRef, newOrder);
-
-        // 2. Update the CustomizationRequest status
-        const requestRef = doc(firestore, 'CustomizationRequest', request.id);
-        await updateDoc(requestRef, {
-            status: 'accepted',
-            artisanId: user.uid,
-            artisanName: artisanData.name,
-        });
+        await deleteDoc(requestRef);
 
         toast({
             title: t.orderAcceptedToast,
-            description: t.orderAcceptedToastDesc,
+            description: "The request has been converted to an order in 'My Orders'.",
         });
 
     } catch (error: any) {

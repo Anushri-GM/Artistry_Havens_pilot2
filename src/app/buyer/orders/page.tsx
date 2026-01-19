@@ -1,17 +1,18 @@
+
 'use client';
 
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useUser, useFirestore, useCollection, useDoc, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { useUser, useFirestore, useCollection } from '@/firebase';
 import type { Order, CustomizationRequest } from '@/lib/types';
 import { useState, useMemo } from 'react';
 import Image from 'next/image';
 import { format } from 'date-fns';
 import { Separator } from '@/components/ui/separator';
 import { useTranslation } from '@/context/translation-context';
-import { Loader2, ChevronLeft, ShoppingBag, X, Check } from 'lucide-react';
-import { doc, query, collection, where, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore';
+import { Loader2, ChevronLeft, ShoppingBag } from 'lucide-react';
+import { doc, query, collection, where } from 'firebase/firestore';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
@@ -23,20 +24,6 @@ export default function BuyerOrdersPage() {
   const { toast } = useToast();
   const { translations } = useTranslation();
   const t_orders = translations.buyer_orders_page;
-  
-  const [isSubmitting, setIsSubmitting] = useState<string | null>(null);
-
-  // Fetch buyer's profile to get shipping address for new orders
-  const buyerProfileRef = useMemo(() => {
-    if (user && firestore) {
-      const ref = doc(firestore, 'users', user.uid);
-      (ref as any).__memo = true;
-      return ref;
-    }
-    return null;
-  }, [user, firestore]);
-  const { data: buyerProfile } = useDoc<{ name: string, location?: string }>(buyerProfileRef);
-
 
   const ordersQuery = useMemo(() => {
     if (user && firestore) {
@@ -60,96 +47,6 @@ export default function BuyerOrdersPage() {
   const { data: customRequests, isLoading: areRequestsLoading } = useCollection<CustomizationRequest>(requestsQuery);
 
   const isLoading = isUserLoading || areOrdersLoading || areRequestsLoading;
-
-  const handleAcceptQuote = (request: CustomizationRequest) => {
-    if (!user || !firestore || !request.id || !request.artisanId || !buyerProfile) {
-        toast({ variant: 'destructive', title: "Error", description: "Missing required information to create order." });
-        return;
-    }
-    if (!buyerProfile.location) {
-        toast({ variant: 'destructive', title: "Address Missing", description: "Please add a shipping address to your profile." });
-        router.push('/buyer/profile');
-        return;
-    }
-
-    setIsSubmitting(request.id);
-
-    const newOrder = {
-        artisan: doc(firestore, 'users', request.artisanId),
-        buyer: doc(firestore, 'users', user.uid),
-        product: null,
-        orderDate: serverTimestamp(),
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-        productName: `Custom: ${request.description.substring(0, 30)}...`,
-        productImageUrl: request.generatedImageUrl,
-        buyerName: buyerProfile.name || 'Valued Customer',
-        artisanName: request.artisanName || 'Artisan',
-        quantity: 1,
-        totalAmount: request.price || 0,
-        status: 'Processing' as const,
-        shippingAddress: buyerProfile.location,
-        paymentId: `pi_custom_${Date.now()}`,
-        customizationDetails: request.description,
-    };
-    const ordersCollectionRef = collection(firestore, 'orders');
-
-    addDoc(ordersCollectionRef, newOrder)
-        .then(() => {
-            const requestRef = doc(firestore, 'CustomizationRequest', request.id!);
-            const updateData = { status: 'accepted' as const };
-            updateDoc(requestRef, updateData)
-                .then(() => {
-                    toast({ title: t_orders.quoteAccepted, description: t_orders.orderCreated });
-                    setIsSubmitting(null);
-                })
-                .catch((error) => {
-                    const permissionError = new FirestorePermissionError({
-                        path: requestRef.path,
-                        operation: 'update',
-                        requestResourceData: updateData,
-                    });
-                    errorEmitter.emit('permission-error', permissionError);
-                    toast({ variant: 'destructive', title: "Error", description: "Order placed, but failed to update request status." });
-                    setIsSubmitting(null);
-                });
-        })
-        .catch((error) => {
-            const permissionError = new FirestorePermissionError({
-                path: ordersCollectionRef.path,
-                operation: 'create',
-                requestResourceData: newOrder,
-            });
-            errorEmitter.emit('permission-error', permissionError);
-            toast({ variant: 'destructive', title: "Error", description: "Could not create the order due to a permission issue." });
-            setIsSubmitting(null);
-        });
-  };
-
-  const handleRejectQuote = (requestId: string) => {
-    if (!firestore || !requestId) return;
-    setIsSubmitting(requestId);
-
-    const requestRef = doc(firestore, 'CustomizationRequest', requestId);
-    const updateData = { status: 'rejected' as const };
-
-    updateDoc(requestRef, updateData)
-        .then(() => {
-            toast({ variant: 'destructive', title: t_orders.quoteRejected });
-        })
-        .catch((error) => {
-            const permissionError = new FirestorePermissionError({
-                path: requestRef.path,
-                operation: 'update',
-                requestResourceData: updateData,
-            });
-            errorEmitter.emit('permission-error', permissionError);
-            toast({ variant: 'destructive', title: "Error", description: "Could not reject the offer due to a permission issue." });
-        })
-        .finally(() => {
-            setIsSubmitting(null);
-        });
-  };
 
   return (
     <div className="container mx-auto p-4 max-w-2xl">
@@ -213,26 +110,11 @@ export default function BuyerOrdersPage() {
                                             <Image src={req.generatedImageUrl} alt={req.description} width={64} height={64} className="rounded-md object-cover aspect-square bg-muted"/>
                                             <div className="flex-grow space-y-1">
                                                 <h4 className="font-semibold line-clamp-2">{req.description}</h4>
+                                                <p className="text-sm font-bold text-primary">AI Price: ₹{req.price?.toFixed(2)}</p>
                                                 <div className="flex justify-between items-end">
-                                                    <div>
-                                                        <Badge variant={
-                                                            req.status === 'pending' ? 'secondary' :
-                                                            req.status === 'quoted' ? 'default' :
-                                                            req.status === 'accepted' ? 'secondary' :
-                                                            'destructive'
-                                                        }>{req.status}</Badge>
-                                                        {req.status === 'quoted' && <p className="text-sm font-bold text-primary">₹{req.price?.toFixed(2)}</p>}
-                                                    </div>
-                                                    {req.status === 'quoted' && (
-                                                        <div className="flex gap-2">
-                                                            <Button size="sm" variant="destructive" onClick={() => handleRejectQuote(req.id!)} disabled={isSubmitting === req.id}>
-                                                                {isSubmitting === req.id ? <Loader2 className="h-4 w-4 animate-spin"/> : <X className="h-4 w-4"/>}
-                                                            </Button>
-                                                            <Button size="sm" onClick={() => handleAcceptQuote(req)} disabled={isSubmitting === req.id}>
-                                                                {isSubmitting === req.id ? <Loader2 className="h-4 w-4 animate-spin"/> : <Check className="h-4 w-4"/>}
-                                                            </Button>
-                                                        </div>
-                                                    )}
+                                                    <Badge variant={
+                                                        req.status === 'pending' ? 'secondary' : 'destructive'
+                                                    }>{req.status}</Badge>
                                                 </div>
                                             </div>
                                         </div>
