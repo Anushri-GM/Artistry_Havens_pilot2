@@ -229,15 +229,13 @@ export default function CustomizePage() {
           );
           const artisansSnapshot = await getDocs(artisansQuery);
           
-          const notificationsRef = collection(firestore, 'notifications');
           const notificationPromises = artisansSnapshot.docs.map(artisanDoc => {
+            const notificationsRef = collection(firestore, 'users', artisanDoc.id, 'notifications');
             const newNotification = {
-              userId: artisanDoc.id,
               title: 'New Customization Request',
               message: `A new request in '${getCategoryDisplayValue(values.category)}' is available.`,
               type: 'customization_request' as const,
               link: '/artisan/orders',
-              isRead: false,
               createdAt: serverTimestamp(),
               requestId: docRef.id
             };

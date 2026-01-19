@@ -6,21 +6,21 @@
       "type": "object",
       "description": "Represents a user of the application, who can be an artisan, buyer, or sponsor.",
       "properties": {
-        "displayName": { "type": "string", "description": "User's display name." },
+        "name": { "type": "string", "description": "User's display name." },
         "userType": { "type": "string", "description": "The type of user (artisan, buyer, or sponsor)." },
         "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of user creation." },
         "email": { "type": "string", "description": "User's email address." },
-        "photoUrl": { "type": "string", "description": "URL of the user's profile picture." },
+        "avatarUrl": { "type": "string", "description": "URL of the user's profile picture." },
         "bio": { "type": "string", "description": "A short biography of the user." },
         "location": { "type": "string", "description": "User's primary shipping address." },
-        "contactInfo": { "type": "string", "description": "User's contact information." },
+        "phone": { "type": "string", "description": "User's contact information." },
         "categories": {
           "type": "array",
           "items": { "type": "string" },
           "description": "For artisans, this lists the craft categories they specialize in."
         }
       },
-      "required": ["displayName", "userType", "createdAt"]
+      "required": ["name", "userType", "createdAt"]
     },
     "Product": {
       "title": "Product",
@@ -116,18 +116,16 @@
     "Notification": {
       "title": "Notification",
       "type": "object",
-      "description": "Represents a notification sent to a user.",
+      "description": "Represents a notification sent to a user. It is stored as a subcollection under the user document.",
       "properties": {
-        "userId": { "type": "string", "description": "The UID of the user receiving the notification." },
         "title": { "type": "string", "description": "The title of the notification." },
         "message": { "type": "string", "description": "The content of the notification message." },
         "type": { "type": "string", "enum": ["customization_request", "new_order", "sponsor_request", "milestone"], "description": "The type of notification." },
         "link": { "type": "string", "description": "A URL path to navigate to when the notification is clicked." },
-        "isRead": { "type": "boolean", "description": "Indicates if the notification has been read." },
         "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of notification creation." },
         "requestId": { "type": "string", "description": "Optional ID of the associated request document." }
       },
-      "required": ["userId", "title", "message", "type", "isRead", "createdAt", "link"]
+      "required": ["title", "message", "type", "createdAt", "link"]
     }
   },
   "auth": {
@@ -142,6 +140,13 @@
         "definition": {
           "schema": { "$ref": "#/entities/User" },
           "description": "Stores user profiles. The userId matches the Firebase Auth UID."
+        }
+      },
+      {
+        "path": "/users/{userId}/notifications/{notificationId}",
+        "definition": {
+          "schema": { "$ref": "#/entities/Notification" },
+          "description": "Stores notifications for a specific user. Notifications are deleted upon being read."
         }
       },
       {
@@ -177,13 +182,6 @@
         "definition": {
           "schema": { "$ref": "#/entities/CustomizationRequest" },
           "description": "Stores custom design requests from buyers. Artisans in the specified category can view and accept these requests."
-        }
-      },
-      {
-        "path": "/notifications/{notificationId}",
-        "definition": {
-          "schema": { "$ref": "#/entities/Notification" },
-          "description": "Stores notifications for users, such as new requests or orders."
         }
       }
     ],

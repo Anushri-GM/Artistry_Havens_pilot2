@@ -107,12 +107,10 @@ export type Order = {
 
 export type Notification = {
   id: string;
-  userId: string;
   title: string;
   message: string;
   type: 'customization_request' | 'new_order' | 'sponsor_request' | 'milestone';
   link: string;
-  isRead: boolean;
   createdAt: any; // For serverTimestamp
   requestId?: string;
 };

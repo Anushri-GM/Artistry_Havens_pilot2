@@ -40,7 +40,7 @@ import { useLanguage } from '@/context/language-context';
 import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
 import { interpretNavCommand } from '@/ai/flows/interpret-navigation-command';
 import { useUser, useFirestore, useAuth, useCollection } from '@/firebase';
-import { doc, getDoc, collection, query, where, orderBy, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, orderBy, deleteDoc } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import type { Notification } from '@/lib/types';
 
@@ -65,8 +65,7 @@ export function HeaderActions() {
     const notificationsQuery = useMemo(() => {
         if (user && firestore) {
           const q = query(
-            collection(firestore, 'notifications'),
-            where('userId', '==', user.uid),
+            collection(firestore, 'users', user.uid, 'notifications'),
             orderBy('createdAt', 'desc')
           );
           (q as any).__memo = true;
@@ -76,8 +75,7 @@ export function HeaderActions() {
       }, [user, firestore]);
 
     const { data: notifications } = useCollection<Notification>(notificationsQuery);
-    const hasUnread = notifications?.some(n => !n.isRead);
-
+    
     const handleLogout = useCallback(async () => {
         try {
             await signOut(auth);
@@ -182,10 +180,17 @@ export function HeaderActions() {
     }, [isListening, isProcessing, language, toast]);
 
 
-    const markAsRead = (id: string) => {
-        if (!firestore) return;
-        const notifRef = doc(firestore, 'notifications', id);
-        updateDoc(notifRef, { isRead: true });
+    const handleNotificationClick = (notification: Notification) => {
+        if (!user || !firestore) return;
+    
+        // Navigate to the link associated with the notification
+        router.push(notification.link);
+    
+        // Delete the notification from the subcollection
+        const notifRef = doc(firestore, 'users', user.uid, 'notifications', notification.id);
+        deleteDoc(notifRef).catch(err => {
+            console.error("Failed to delete notification: ", err);
+        });
     };
 
     return (
@@ -208,7 +213,7 @@ export function HeaderActions() {
                         className="relative rounded-full"
                     >
                         <Bell className="h-5 w-5" />
-                        {hasUnread && (
+                        {notifications && notifications.length > 0 && (
                             <span className="absolute top-2 right-2.5 h-2 w-2 rounded-full bg-red-500" />
                         )}
                     </Button>
@@ -218,9 +223,8 @@ export function HeaderActions() {
                     <DropdownMenuSeparator />
                     {notifications && notifications.length > 0 ? (
                         notifications.map((n) => (
-                            <DropdownMenuItem key={n.id} onClick={() => markAsRead(n.id)} className={cn("flex items-start gap-2", !n.isRead && "bg-accent/50")}>
-                                {!n.isRead && <span className="mt-1 h-2 w-2 rounded-full bg-primary" />}
-                                <div className={cn(!n.isRead && 'pl-1')}>
+                            <DropdownMenuItem key={n.id} onSelect={() => handleNotificationClick(n)} className="flex items-start gap-2 cursor-pointer">
+                                <div>
                                     <p className="font-semibold">{n.title}</p>
                                     <p className="text-xs text-muted-foreground">{n.message}</p>
                                 </div>
@@ -413,5 +417,3 @@ export default function ArtisanSidebar({ closeSheet }: ArtisanSidebarProps) {
         </div>
     );
 }
-
-    

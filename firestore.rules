@@ -28,6 +28,18 @@ service cloud.firestore {
                        isAdmin()
                      );
       allow delete: if isAdmin();
+
+      // Rules for the 'notifications' subcollection
+      match /notifications/{notificationId} {
+        // A user can read, list, and delete their own notifications.
+        allow read, list, delete: if request.auth.uid == userId;
+
+        // Allow any authenticated user to create a notification for another user.
+        // This is necessary for the client-side fan-out pattern where a buyer
+        // creates notifications for multiple artisans.
+        // In a production environment, this would ideally be handled by a Cloud Function.
+        allow create: if request.auth != null;
+      }
     }
     
     // Rules for the 'products' collection
@@ -128,19 +140,6 @@ service cloud.firestore {
       allow update: if request.auth != null && resource.data.artisan == /databases/$(database)/documents/users/$(request.auth.uid);
                       
       allow delete: if false; // Orders should generally not be deleted.
-    }
-
-    // Rules for Notifications
-    match /notifications/{notificationId} {
-      // Any authenticated user can create a notification.
-      allow create: if request.auth != null;
-
-      // Only the recipient can get or update their notification.
-      // The `get` permission also implicitly secures `list` queries that filter by `userId`.
-      allow get, update: if request.auth != null && resource.data.userId == request.auth.uid;
-
-      // Users cannot delete notifications.
-      allow delete: if false;
     }
 
     // Attendance, alerts, bookings, and analytics can only be accessed by admins for now
