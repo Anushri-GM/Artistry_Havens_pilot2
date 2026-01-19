@@ -25,7 +25,7 @@ import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/icons';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import SupportDialog from './support-dialog';
 import {
     DropdownMenu,
@@ -39,19 +39,11 @@ import { useTranslation } from '@/context/translation-context';
 import { useLanguage } from '@/context/language-context';
 import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
 import { interpretNavCommand } from '@/ai/flows/interpret-navigation-command';
-import { useUser, useFirestore, useAuth } from '@/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { useUser, useFirestore, useAuth, useCollection } from '@/firebase';
+import { doc, getDoc, collection, query, where, orderBy, updateDoc } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
+import type { Notification } from '@/lib/types';
 
-
-interface Notification {
-    id: string;
-    titleKey: 'newOrder' | 'newSponsor' | 'milestone';
-    descriptionKey: 'newOrderDesc' | 'newSponsorDesc' | 'milestoneDesc';
-    descriptionParams?: { [key: string]: string | number };
-    read: boolean;
-    createdAt: Date;
-}
 
 export function HeaderActions() {
     const { translations } = useTranslation();
@@ -62,23 +54,29 @@ export function HeaderActions() {
     const t_sidebar = translations.artisan_sidebar;
     const auth = useAuth();
     
-    const [notifications, setNotifications] = useState<Notification[]>([]);
-    const hasUnread = notifications.some(n => !n.read);
-
     const [isListening, setIsListening] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
     const recognitionRef = useRef<any>(null);
     const [spokenCommand, setSpokenCommand] = useState<string | null>(null);
+    
+    const { user } = useUser();
+    const firestore = useFirestore();
 
-    useEffect(() => {
-        // Mock notifications
-        const mockNotifications: Notification[] = [
-            { id: '1', titleKey: 'newOrder', descriptionKey: 'newOrderDesc', descriptionParams: { productName: "Ceramic Dawn Vase"}, read: false, createdAt: new Date(Date.now() - 1000 * 60 * 5) },
-            { id: '2', titleKey: 'newSponsor', descriptionKey: 'newSponsorDesc', descriptionParams: { sponsorName: "ArtLover22" }, read: false, createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2) },
-            { id: '3', titleKey: 'milestone', descriptionKey: 'milestoneDesc', descriptionParams: { salesCount: 100 }, read: true, createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24) },
-        ];
-        setNotifications(mockNotifications);
-    }, []);
+    const notificationsQuery = useMemo(() => {
+        if (user && firestore) {
+          const q = query(
+            collection(firestore, 'notifications'),
+            where('userId', '==', user.uid),
+            orderBy('createdAt', 'desc')
+          );
+          (q as any).__memo = true;
+          return q;
+        }
+        return null;
+      }, [user, firestore]);
+
+    const { data: notifications } = useCollection<Notification>(notificationsQuery);
+    const hasUnread = notifications?.some(n => !n.isRead);
 
     const handleLogout = useCallback(async () => {
         try {
@@ -185,18 +183,10 @@ export function HeaderActions() {
 
 
     const markAsRead = (id: string) => {
-        setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-    }
-    
-    const formatNotificationDescription = (key: string, params: any) => {
-        let desc = key;
-        if (params) {
-            for (const p of Object.keys(params)) {
-                desc = desc.replace(`{${p}}`, params[p]);
-            }
-        }
-        return desc;
-    }
+        if (!firestore) return;
+        const notifRef = doc(firestore, 'notifications', id);
+        updateDoc(notifRef, { isRead: true });
+    };
 
     return (
         <div className="flex items-center gap-1">
@@ -226,13 +216,13 @@ export function HeaderActions() {
                 <DropdownMenuContent align="end" className="w-80">
                     <DropdownMenuLabel>{t_notifications.title}</DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    {notifications.length > 0 ? (
+                    {notifications && notifications.length > 0 ? (
                         notifications.map((n) => (
-                            <DropdownMenuItem key={n.id} onClick={() => markAsRead(n.id)} className={cn("flex items-start gap-2", !n.read && "bg-accent/50")}>
-                                {!n.read && <span className="mt-1 h-2 w-2 rounded-full bg-primary" />}
-                                <div className={cn(!n.read && 'pl-1')}>
-                                    <p className="font-semibold">{t_notifications[n.titleKey]}</p>
-                                    <p className="text-xs text-muted-foreground">{formatNotificationDescription(t_notifications[n.descriptionKey], n.descriptionParams)}</p>
+                            <DropdownMenuItem key={n.id} onClick={() => markAsRead(n.id)} className={cn("flex items-start gap-2", !n.isRead && "bg-accent/50")}>
+                                {!n.isRead && <span className="mt-1 h-2 w-2 rounded-full bg-primary" />}
+                                <div className={cn(!n.isRead && 'pl-1')}>
+                                    <p className="font-semibold">{n.title}</p>
+                                    <p className="text-xs text-muted-foreground">{n.message}</p>
                                 </div>
                             </DropdownMenuItem>
                         ))

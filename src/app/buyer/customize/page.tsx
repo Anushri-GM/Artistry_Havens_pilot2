@@ -24,7 +24,7 @@ import { useTranslation } from '@/context/translation-context';
 import { useLanguage } from '@/context/language-context';
 import { cn } from '@/lib/utils';
 import { useUser, useFirestore, useDoc, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { collection, addDoc, serverTimestamp, doc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, getDocs, query, where } from 'firebase/firestore';
 import { ToastAction } from '@/components/ui/toast';
 
 const formSchema = z.object({
@@ -215,11 +215,37 @@ export default function CustomizePage() {
       };
 
       addDoc(requestsRef, newRequest)
-        .then(() => {
+        .then(async (docRef) => {
           toast({
             title: t.requestSentToast,
             description: t.requestSentDesc,
           });
+
+          // Notify artisans
+          const artisansQuery = query(
+            collection(firestore, 'users'),
+            where('userType', '==', 'artisan'),
+            where('categories', 'array-contains', values.category)
+          );
+          const artisansSnapshot = await getDocs(artisansQuery);
+          
+          const notificationsRef = collection(firestore, 'notifications');
+          const notificationPromises = artisansSnapshot.docs.map(artisanDoc => {
+            const newNotification = {
+              userId: artisanDoc.id,
+              title: 'New Customization Request',
+              message: `A new request in '${getCategoryDisplayValue(values.category)}' is available.`,
+              type: 'customization_request' as const,
+              link: '/artisan/orders',
+              isRead: false,
+              createdAt: serverTimestamp(),
+              requestId: docRef.id
+            };
+            return addDoc(notificationsRef, newNotification);
+          });
+
+          await Promise.all(notificationPromises);
+
           form.reset();
           setGeneratedDesign(null);
         })

@@ -130,6 +130,16 @@ service cloud.firestore {
       allow delete: if false; // Orders should generally not be deleted.
     }
 
+    // Rules for Notifications
+    match /notifications/{notificationId} {
+      // Any authenticated user can create a notification (e.g., a buyer notifying artisans).
+      allow create: if request.auth != null;
+      // Only the intended recipient can read or update (e.g., mark as read) their notification.
+      allow read, update: if request.auth != null && resource.data.userId == request.auth.uid;
+      // Users cannot delete notifications.
+      allow delete: if false;
+    }
+
     // Attendance, alerts, bookings, and analytics can only be accessed by admins for now
     match /attendance/{docId} {
       allow read, write: if isAdmin();

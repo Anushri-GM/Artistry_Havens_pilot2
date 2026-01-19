@@ -112,6 +112,22 @@
         "price": { "type": "number", "description": "The AI-suggested price for the custom work." }
       },
       "required": ["buyerId", "buyerName", "buyerShippingAddress", "generatedImageUrl", "description", "category", "price", "createdAt"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "type": "object",
+      "description": "Represents a notification sent to a user.",
+      "properties": {
+        "userId": { "type": "string", "description": "The UID of the user receiving the notification." },
+        "title": { "type": "string", "description": "The title of the notification." },
+        "message": { "type": "string", "description": "The content of the notification message." },
+        "type": { "type": "string", "enum": ["customization_request", "new_order", "sponsor_request", "milestone"], "description": "The type of notification." },
+        "link": { "type": "string", "description": "A URL path to navigate to when the notification is clicked." },
+        "isRead": { "type": "boolean", "description": "Indicates if the notification has been read." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of notification creation." },
+        "requestId": { "type": "string", "description": "Optional ID of the associated request document." }
+      },
+      "required": ["userId", "title", "message", "type", "isRead", "createdAt", "link"]
     }
   },
   "auth": {
@@ -161,6 +177,13 @@
         "definition": {
           "schema": { "$ref": "#/entities/CustomizationRequest" },
           "description": "Stores custom design requests from buyers. Artisans in the specified category can view and accept these requests."
+        }
+      },
+      {
+        "path": "/notifications/{notificationId}",
+        "definition": {
+          "schema": { "$ref": "#/entities/Notification" },
+          "description": "Stores notifications for users, such as new requests or orders."
         }
       }
     ],
