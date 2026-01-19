@@ -16,6 +16,17 @@ service cloud.firestore {
       return userData.userType == 'artisan' || userData.role == 'artisan';
     }
 
+    // Helper function to check if a user can create a CustomizationRequest
+    function canCreateCustomizationRequest() {
+      let data = request.resource.data;
+      return request.auth != null
+             && data.buyerId == request.auth.uid
+             && 'generatedImageUrl' in data
+             && data.price > 0
+             && data.buyerName.size() > 0
+             && data.buyerShippingAddress.size() > 0;
+    }
+
     // Users can read their own profile. Admins can read any profile.
     // A user can create their own profile.
     // A user can update their own profile, but cannot change their role. Admins can update any profile.
@@ -68,14 +79,8 @@ service cloud.firestore {
     
     // Customization Requests
     match /CustomizationRequest/{requestId} {
-      // A buyer can create a request for themselves.
-      // Must include generated image, price, buyer name, and shipping address.
-      allow create: if request.auth != null 
-                    && request.resource.data.buyerId == request.auth.uid
-                    && 'generatedImageUrl' in request.resource.data
-                    && request.resource.data.price > 0
-                    && request.resource.data.buyerName.size() > 0
-                    && request.resource.data.buyerShippingAddress.size() > 0;
+      // A buyer can create a request for themselves using the helper function.
+      allow create: if canCreateCustomizationRequest();
 
       // An authenticated user can list requests. Client-side queries MUST be secure.
       allow list: if request.auth != null;
@@ -106,7 +111,7 @@ service cloud.firestore {
                     request.resource.data.status == 'Processing' &&
                     request.resource.data.totalAmount > 0 &&
                     request.resource.data.quantity > 0 &&
-                    request.resource.data.shippingAddress != null && request.resource.data.shippingAddress != "" &&
+                    request.resource.data.shippingAddress.size() > 0 &&
                     'buyerName' in request.resource.data &&
                     'artisanName' in request.resource.data &&
                     'productName' in request.resource.data &&
@@ -116,13 +121,13 @@ service cloud.firestore {
                       (
                         request.resource.data.product != null &&
                         get(request.resource.data.product).data != null &&
-                        (!('customizationDetails' in request.resource.data) || request.resource.data.customizationDetails == "") &&
+                        (!('customizationDetails' in request.resource.data) || request.resource.data.customizationDetails.size() == 0) &&
                         request.resource.data.buyer == /databases/$(database)/documents/users/$(request.auth.uid)
                       ) ||
                       // Custom product order, created by ARTISAN
                       (
                         request.resource.data.product == null &&
-                        'customizationDetails' in request.resource.data && request.resource.data.customizationDetails != "" &&
+                        'customizationDetails' in request.resource.data && request.resource.data.customizationDetails.size() > 0 &&
                         request.resource.data.artisan == /databases/$(database)/documents/users/$(request.auth.uid)
                       )
                     );
