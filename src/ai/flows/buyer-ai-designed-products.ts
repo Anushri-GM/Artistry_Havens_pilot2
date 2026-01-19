@@ -1,7 +1,7 @@
 
 'use server';
 /**
- * @fileOverview An AI flow that generates custom product images for buyers.
+ * @fileOverview An AI flow that generates custom product images and predicts a price for buyers.
  */
 
 import { ai } from '@/ai/genkit';
@@ -14,10 +14,24 @@ import {
     BuyerAiDesignedProductsOutputSchema
 } from './buyer-ai-designed-products-types';
 import { googleAI } from '@genkit-ai/google-genai';
+import { z } from 'zod';
 
-const generateProductImageFlow = ai.defineFlow(
+const pricePredictionPrompt = ai.definePrompt({
+  name: 'pricePredictionPrompt',
+  input: { schema: z.object({ description: z.string(), imageUrl: z.string() }) },
+  output: { schema: z.object({ price: z.number() }) },
+  prompt: `You are an expert appraiser of artisanal crafts in India. Based on the following description and image of a custom product, estimate a fair market price in Indian Rupees (₹).
+  Consider materials, complexity, and artistic value.
+  Return only a JSON object with a single key "price" containing the estimated price as a number.
+
+  Description: {{{description}}}
+  Image: {{media url=imageUrl}}`,
+});
+
+
+const generateProductImageAndPriceFlow = ai.defineFlow(
   {
-    name: 'generateProductImageFlow',
+    name: 'generateProductImageAndPriceFlow',
     inputSchema: BuyerAiDesignedProductsInputSchema,
     outputSchema: BuyerAiDesignedProductsOutputSchema,
   },
@@ -36,23 +50,42 @@ const generateProductImageFlow = ai.defineFlow(
         }
     }
 
-    // This call gets the specific Imagen model and generates a single image.
+    // Step 1: Generate the image
     const { media } = await ai.generate({
       model: googleAI.model('imagen-4.0-fast-generate-001'),
       prompt: `A single, photorealistic image of a handmade artisan craft. The product should be: "${englishPrompt}". The craft style is ${style}. The image should be well-lit, on a clean background, as if for an e-commerce product page.`,
       config: {
-        // We explicitly ask for one image.
         numberOfImages: 1,
       }
     });
 
-    // The response contains the image as a media object with a data URI.
     if (!media?.url) {
       throw new Error('Image generation failed to return a valid media URL.');
     }
+    const imageUrl = media.url;
 
-    // We return the data URI string.
-    return media.url;
+    // Step 2: Predict the price using the generated image and description
+    const priceResponse = await pricePredictionPrompt({
+      description: englishPrompt,
+      imageUrl: imageUrl,
+    });
+    
+    const predictedPrice = priceResponse.output?.price;
+
+    if (typeof predictedPrice !== 'number') {
+      console.error('Price prediction failed, using fallback price.');
+      // Fallback price in case of failure
+      return {
+        imageUrl: imageUrl,
+        predictedPrice: 100 + Math.floor(Math.random() * 400),
+      };
+    }
+
+    // Step 3: Return both the image URL and the predicted price
+    return {
+      imageUrl: imageUrl,
+      predictedPrice: Math.round(predictedPrice),
+    };
   }
 );
 
@@ -61,12 +94,14 @@ export async function buyerAiDesignedProducts(input: BuyerAiDesignedProductsInpu
   const fallbackImage = PlaceHolderImages.find(p => p.id === 'product-7')?.imageUrl || 'https://picsum.photos/seed/fallback/512/512';
   
   try {
-    // We call the correctly defined flow.
-    const result = await generateProductImageFlow(input);
+    const result = await generateProductImageAndPriceFlow(input);
     return result;
 
   } catch (error) {
-    console.error('Error generating image with AI, returning fallback.', error);
-    return fallbackImage;
+    console.error('Error in AI design and price flow, returning fallback.', error);
+    return {
+        imageUrl: fallbackImage,
+        predictedPrice: 150
+    };
   }
 }

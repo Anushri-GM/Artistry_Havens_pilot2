@@ -54,10 +54,14 @@ service cloud.firestore {
     
     // Customization Requests
     match /CustomizationRequest/{requestId} {
-      // A buyer can create a request for themselves, and MUST include the generated image.
+      // A buyer can create a request for themselves.
+      // Must include generated image, price, buyer name, and shipping address.
       allow create: if request.auth != null 
                     && request.resource.data.buyerId == request.auth.uid
-                    && 'generatedImageUrl' in request.resource.data;
+                    && 'generatedImageUrl' in request.resource.data
+                    && request.resource.data.price > 0
+                    && 'buyerName' in request.resource.data && request.resource.data.buyerName != ""
+                    && 'buyerShippingAddress' in request.resource.data && request.resource.data.buyerShippingAddress != "";
 
       // An authenticated user can list requests. Client-side queries MUST be secure.
       allow list: if request.auth != null;
@@ -70,19 +74,14 @@ service cloud.firestore {
         (isArtisan() && resource.data.category in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.categories)
       );
 
-      // An artisan can make an offer, or a buyer can accept/reject it.
-      allow update: if request.auth != null && (
-          // Artisan makes an offer on a pending request
-          (isArtisan() && resource.data.status == 'pending'
-           && request.resource.data.status == 'quoted'
-           && request.resource.data.artisanId == request.auth.uid
-           && 'artisanName' in request.resource.data
-           && request.resource.data.price > 0)
-          ||
-          // Buyer accepts or rejects a quoted offer
-          (resource.data.buyerId == request.auth.uid
-           && resource.data.status == 'quoted'
-           && (request.resource.data.status == 'accepted' || request.resource.data.status == 'rejected'))
+      // An artisan can accept or decline a pending request.
+      allow update: if request.auth != null && isArtisan() && resource.data.status == 'pending' && (
+          // Artisan accepts
+          (request.resource.data.status == 'accepted' && 
+           request.resource.data.artisanId == request.auth.uid &&
+           'artisanName' in request.resource.data) ||
+          // Artisan declines
+          request.resource.data.status == 'rejected'
       );
                     
       allow delete: if false; // Immutable for now

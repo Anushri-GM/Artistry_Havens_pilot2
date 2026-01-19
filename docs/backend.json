@@ -99,17 +99,19 @@
       "description": "Represents a custom design request from a buyer, generated either from a text prompt or a reference image.",
       "properties": {
         "buyerId": { "type": "string", "description": "The UID of the buyer making the request." },
+        "buyerName": { "type": "string", "description": "The denormalized name of the buyer." },
+        "buyerShippingAddress": { "type": "string", "description": "The denormalized shipping address of the buyer." },
         "referenceImageUrl": { "type": "string", "description": "The optional data URI of the user-uploaded reference image." },
         "generatedImageUrl": { "type": "string", "description": "The data URI of the AI-generated image showing the requested changes." },
         "description": { "type": "string", "description": "The buyer's description of the requested changes." },
         "category": { "type": "string", "description": "The ID of the craft category for the request." },
-        "status": { "type": "string", "description": "The status of the request (e.g., 'pending', 'quoted', 'accepted', 'rejected')." },
+        "status": { "type": "string", "enum": ["pending", "accepted", "rejected"], "description": "The status of the request." },
         "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of request creation." },
-        "artisanId": { "type": "string", "description": "The UID of the artisan who made an offer on the request." },
-        "artisanName": { "type": "string", "description": "The denormalized name of the artisan who made the offer." },
-        "price": { "type": "number", "description": "The price quoted by the artisan for the custom work." }
+        "artisanId": { "type": "string", "description": "The UID of the artisan who accepted the request." },
+        "artisanName": { "type": "string", "description": "The denormalized name of the artisan who accepted the request." },
+        "price": { "type": "number", "description": "The AI-suggested price for the custom work." }
       },
-      "required": ["buyerId", "generatedImageUrl", "description", "category", "createdAt"]
+      "required": ["buyerId", "buyerName", "buyerShippingAddress", "generatedImageUrl", "description", "category", "price", "createdAt"]
     }
   },
   "auth": {

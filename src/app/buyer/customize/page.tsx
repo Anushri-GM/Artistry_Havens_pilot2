@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -23,8 +23,9 @@ import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useTranslation } from '@/context/translation-context';
 import { useLanguage } from '@/context/language-context';
 import { cn } from '@/lib/utils';
-import { useUser, useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { useUser, useFirestore, useDoc, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { collection, addDoc, serverTimestamp, doc } from 'firebase/firestore';
+import { ToastAction } from '@/components/ui/toast';
 
 const formSchema = z.object({
   description: z.string().min(10, 'Please describe your idea in at least 10 characters.'),
@@ -34,7 +35,7 @@ const formSchema = z.object({
 export default function CustomizePage() {
   const router = useRouter();
   const { toast } = useToast();
-  const { translations, isTranslating } = useTranslation();
+  const { translations } = useTranslation();
   const t = translations.customize_page;
   const { language } = useLanguage();
   const { user } = useUser();
@@ -42,11 +43,22 @@ export default function CustomizePage() {
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [generatedImage, setGeneratedImage] = useState<string | null>(null);
+  const [generatedDesign, setGeneratedDesign] = useState<{ imageUrl: string; predictedPrice: number } | null>(null);
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<any>(null);
   
   const defaultImage = PlaceHolderImages.find(p => p.id === 'product-5');
+
+  // Fetch buyer's profile to get shipping address and name
+  const buyerProfileRef = useMemo(() => {
+    if (user && firestore) {
+      const ref = doc(firestore, 'users', user.uid);
+      (ref as any).__memo = true;
+      return ref;
+    }
+    return null;
+  }, [user, firestore]);
+  const { data: buyerProfile } = useDoc<{ name: string, location?: string }>(buyerProfileRef);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -107,24 +119,27 @@ export default function CustomizePage() {
     }
     
     setIsGenerating(true);
-    setGeneratedImage(null);
+    setGeneratedDesign(null);
     try {
       const categoryObject = baseCategoriesData.find(c => c.id === category);
       const categoryName = categoryObject ? categoryObject.name : 'General';
 
-      const imageUrl = await buyerAiDesignedProducts({
+      const result = await buyerAiDesignedProducts({
         prompt: description,
         style: categoryName,
         language: language,
       });
-      setGeneratedImage(imageUrl);
+      setGeneratedDesign(result);
       toast({
         title: t.imageGeneratedToast,
         description: t.imageGeneratedDesc,
       });
     } catch (error) {
       console.error(error);
-      setGeneratedImage(defaultImage?.imageUrl || '');
+      setGeneratedDesign({ 
+        imageUrl: defaultImage?.imageUrl || '',
+        predictedPrice: 150
+      });
       toast({
         variant: 'destructive',
         title: t.generationFailedToast,
@@ -159,7 +174,7 @@ export default function CustomizePage() {
   };
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!generatedImage) {
+    if (!generatedDesign) {
         toast({
             variant: 'destructive',
             title: t.noImageToast,
@@ -168,10 +183,15 @@ export default function CustomizePage() {
         return;
     }
      if (!user || !firestore) {
+      toast({ variant: 'destructive', title: 'Authentication Error', description: 'You must be logged in to send a request.' });
+      return;
+    }
+    if (!buyerProfile?.location || buyerProfile?.location.trim() === '') {
       toast({
         variant: 'destructive',
-        title: 'Authentication Error',
-        description: 'You must be logged in to send a request.',
+        title: 'Address Missing',
+        description: 'Please add a shipping address to your profile before sending a request.',
+        action: <ToastAction altText="Go to profile" onClick={() => router.push('/buyer/profile')}>Go to Profile</ToastAction>,
       });
       return;
     }
@@ -179,14 +199,17 @@ export default function CustomizePage() {
     setIsSubmitting(true);
     
     try {
-      const compressedGeneratedImage = await compressImage(generatedImage);
+      const compressedGeneratedImage = await compressImage(generatedDesign.imageUrl);
       const requestsRef = collection(firestore, 'CustomizationRequest');
       
       const newRequest = {
         buyerId: user.uid,
+        buyerName: buyerProfile.name || "Anonymous Buyer",
+        buyerShippingAddress: buyerProfile.location,
         generatedImageUrl: compressedGeneratedImage,
         description: values.description,
         category: values.category,
+        price: generatedDesign.predictedPrice,
         status: 'pending' as const,
         createdAt: serverTimestamp(),
       };
@@ -198,7 +221,7 @@ export default function CustomizePage() {
             description: t.requestSentDesc,
           });
           form.reset();
-          setGeneratedImage(null);
+          setGeneratedDesign(null);
         })
         .catch((error) => {
           const permissionError = new FirestorePermissionError({
@@ -319,8 +342,13 @@ export default function CustomizePage() {
               <div className="relative flex flex-col items-center justify-center w-full aspect-square border-2 border-dashed rounded-lg bg-secondary overflow-hidden">
                 {isGenerating ? (
                     <Loader2 className="w-12 h-12 text-primary animate-spin" />
-                ) : generatedImage ? (
-                    <Image src={generatedImage} alt="AI generated craft" fill className="object-cover"/>
+                ) : generatedDesign?.imageUrl ? (
+                    <>
+                        <Image src={generatedDesign.imageUrl} alt="AI generated craft" fill className="object-cover"/>
+                        <div className="absolute bottom-2 right-2 bg-black/50 text-white font-bold p-2 rounded-md text-lg">
+                           ₹{generatedDesign.predictedPrice}
+                        </div>
+                    </>
                 ) : (
                     <div className="flex flex-col items-center justify-center text-muted-foreground text-center p-4">
                         <Sparkles className="w-8 h-8 mb-2" />
@@ -331,7 +359,7 @@ export default function CustomizePage() {
 
             </CardContent>
             <CardFooter>
-              <Button type="submit" className="w-full" disabled={isSubmitting || !generatedImage}>
+              <Button type="submit" className="w-full" disabled={isSubmitting || !generatedDesign}>
                 {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{t.sendingRequestButton}</> : <><Send className="mr-2 h-4 w-4" />{t.sendRequestButton}</>}
               </Button>
             </CardFooter>

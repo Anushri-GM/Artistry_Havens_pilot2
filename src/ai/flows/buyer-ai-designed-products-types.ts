@@ -7,6 +7,9 @@ export const BuyerAiDesignedProductsInputSchema = z.object({
 });
 export type BuyerAiDesignedProductsInput = z.infer<typeof BuyerAiDesignedProductsInputSchema>;
 
-// The output is a string, which will contain the base64 data URI of the generated image.
-export const BuyerAiDesignedProductsOutputSchema = z.string().describe('A data URI of the generated image.');
+// The output is now an object containing the image URL and the predicted price.
+export const BuyerAiDesignedProductsOutputSchema = z.object({
+  imageUrl: z.string().describe('A data URI of the generated image.'),
+  predictedPrice: z.number().describe('The AI-predicted price for the custom item.'),
+});
 export type BuyerAiDesignedProductsOutput = z.infer<typeof BuyerAiDesignedProductsOutputSchema>;

@@ -72,11 +72,13 @@ export type SavedAdvertisement = {
 export type CustomizationRequest = {
   id?: string;
   buyerId: string;
+  buyerName: string;
+  buyerShippingAddress: string;
   referenceImageUrl?: string;
   generatedImageUrl: string;
   description: string;
   category: string;
-  status: 'pending' | 'quoted' | 'accepted' | 'rejected';
+  status: 'pending' | 'accepted' | 'rejected';
   createdAt: any; // for serverTimestamp
   artisanId?: string;
   artisanName?: string;

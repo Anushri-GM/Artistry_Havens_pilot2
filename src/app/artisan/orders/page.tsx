@@ -14,11 +14,8 @@ import { Check, X, Package, Ship, CheckCircle, Loader2 } from 'lucide-react';
 import type { Order, CustomizationRequest } from '@/lib/types';
 import { useTranslation } from '@/context/translation-context';
 import TutorialDialog from '@/components/tutorial-dialog';
-import { useUser, useFirestore, useCollection, useDoc } from '@/firebase';
-import { collection, query, where, doc, updateDoc, Timestamp } from 'firebase/firestore';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { useUser, useFirestore, useCollection, useDoc, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { collection, query, where, doc, updateDoc, Timestamp, addDoc, serverTimestamp } from 'firebase/firestore';
 
 type OrderStatus = 'Processing' | 'Shipped' | 'Delivered';
 
@@ -31,10 +28,7 @@ export default function OrdersPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
 
-  const [declinedRequests, setDeclinedRequests] = useState<string[]>([]);
-  const [requestToPrice, setRequestToPrice] = useState<CustomizationRequest | null>(null);
-  const [isSubmittingOffer, setIsSubmittingOffer] = useState(false);
-  const [offerPrice, setOfferPrice] = useState('');
+  const [isAccepting, setIsAccepting] = useState<string | null>(null);
 
   // Fetch artisan data to get their specialized categories and name
   const artisanDocRef = useMemo(() => {
@@ -79,57 +73,80 @@ export default function OrdersPage() {
   const isLoading = isUserLoading || areOrdersLoading || isLoadingRequests;
 
 
-  // Filter out requests the artisan has already declined
-  const pendingRequests = useMemo(() => {
-    return customRequestsData?.filter(req => !declinedRequests.includes(req.id!)) || [];
-  }, [customRequestsData, declinedRequests]);
+  const handleAcceptRequest = async (request: CustomizationRequest) => {
+    if (!user || !firestore || !request.id || !artisanData?.name) return;
+    
+    setIsAccepting(request.id);
+    
+    // 1. Create a new Order document
+    const newOrder = {
+        artisan: doc(firestore, 'users', user.uid),
+        buyer: doc(firestore, 'users', request.buyerId),
+        product: null,
+        orderDate: serverTimestamp(),
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        productName: `Custom: ${request.description.substring(0, 30)}...`,
+        productImageUrl: request.generatedImageUrl,
+        buyerName: request.buyerName,
+        artisanName: artisanData.name,
+        quantity: 1,
+        totalAmount: request.price || 0,
+        status: 'Processing' as const,
+        shippingAddress: request.buyerShippingAddress,
+        paymentId: `pi_custom_${Date.now()}`,
+        customizationDetails: request.description,
+    };
+    const ordersCollectionRef = collection(firestore, 'orders');
 
-  useEffect(() => {
-    // Load declined custom requests from local storage
-    const storedDeclined = JSON.parse(localStorage.getItem('declinedCustomRequests') || '[]');
-    setDeclinedRequests(storedDeclined);
-  }, []);
-
-  const handleMakeOffer = async () => {
-    if (!firestore || !user || !requestToPrice?.id || !artisanData?.name) return;
-    const price = parseFloat(offerPrice);
-    if (isNaN(price) || price <= 0) {
-        toast({ variant: 'destructive', title: t.invalidPrice, description: t.invalidPriceDesc });
-        return;
-    }
-
-    setIsSubmittingOffer(true);
-    const requestRef = doc(firestore, 'CustomizationRequest', requestToPrice.id);
     try {
+        await addDoc(ordersCollectionRef, newOrder);
+
+        // 2. Update the CustomizationRequest status
+        const requestRef = doc(firestore, 'CustomizationRequest', request.id);
         await updateDoc(requestRef, {
-            status: 'quoted',
-            price: price,
+            status: 'accepted',
             artisanId: user.uid,
-            artisanName: artisanData.name
+            artisanName: artisanData.name,
         });
+
         toast({
-            title: t.offerSent,
-            description: t.offerSentDesc
+            title: t.orderAcceptedToast,
+            description: t.orderAcceptedToastDesc,
         });
-        setRequestToPrice(null);
-        setOfferPrice('');
-    } catch (error) {
-        console.error("Error making offer: ", error);
-        toast({ variant: 'destructive', title: "Error", description: "Could not send the offer." });
+
+    } catch (error: any) {
+        console.error("Error accepting request: ", error);
+        toast({
+            variant: "destructive",
+            title: "Error Accepting Request",
+            description: "Could not create the order. Please check permissions and try again."
+        });
+        const permissionError = new FirestorePermissionError({
+            path: ordersCollectionRef.path,
+            operation: 'create',
+            requestResourceData: newOrder
+        });
+        errorEmitter.emit('permission-error', permissionError);
     } finally {
-        setIsSubmittingOffer(false);
+        setIsAccepting(null);
     }
   };
 
-  const handleDecline = (requestId: string) => {
-    const newDeclined = [...declinedRequests, requestId];
-    setDeclinedRequests(newDeclined);
-    localStorage.setItem('declinedCustomRequests', JSON.stringify(newDeclined));
-    toast({
-      variant: 'destructive',
-      title: "Request Hidden",
-      description: "You will no longer see this request in your list.",
-    });
+  const handleDecline = async (requestId: string) => {
+    if (!firestore || !requestId) return;
+    const requestRef = doc(firestore, 'CustomizationRequest', requestId);
+    try {
+        await updateDoc(requestRef, { status: 'rejected' });
+        toast({
+          variant: 'destructive',
+          title: "Request Declined",
+          description: "The custom design request has been declined.",
+        });
+    } catch (error) {
+        console.error("Error declining request:", error);
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not decline the request.' });
+    }
   };
 
   const handleUpdate = (orderId: string) => {
@@ -196,7 +213,7 @@ export default function OrdersPage() {
       );
     }
 
-    if (pendingRequests.length === 0) {
+    if (!customRequestsData || customRequestsData.length === 0) {
       return (
         <Card className="flex items-center justify-center p-12 border-dashed">
             <div className="text-center text-muted-foreground">
@@ -209,7 +226,7 @@ export default function OrdersPage() {
 
     return (
       <div className="space-y-4">
-        {pendingRequests.map((request) => (
+        {customRequestsData.map((request) => (
           <Card key={request.id} className="overflow-hidden">
             <CardContent className="p-3 sm:p-4 flex items-start gap-4">
               <div className="relative w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0">
@@ -221,13 +238,15 @@ export default function OrdersPage() {
                     className="rounded-md object-cover aspect-square bg-muted"
                 />
                </div>
-              <div className="flex-1">
+              <div className="flex-1 space-y-2">
                 <CardTitle className="text-md font-headline mb-1 leading-tight">{t.customRequestTitle}</CardTitle>
-                <p className="text-sm text-muted-foreground line-clamp-3">{request.description}</p>
+                <p className="text-sm text-muted-foreground line-clamp-2">{request.description}</p>
+                <p className="font-bold text-md text-primary">AI Price: ₹{request.price?.toFixed(2)}</p>
               </div>
               <div className="flex flex-col gap-2 mt-0 w-auto">
-                <Button onClick={() => setRequestToPrice(request)} size="sm" className="whitespace-nowrap">
-                   {t.makeOfferButton}
+                <Button onClick={() => handleAcceptRequest(request)} size="sm" className="whitespace-nowrap" disabled={isAccepting === request.id}>
+                  {isAccepting === request.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Check className="mr-2 h-4 w-4" />}
+                  {t.acceptButton}
                 </Button>
                 <Button onClick={() => handleDecline(request.id!)} variant="outline" size="sm" className="whitespace-nowrap">
                   <X className="mr-2 h-4 w-4" /> {t.declineButton}
@@ -302,37 +321,6 @@ export default function OrdersPage() {
           </TabsContent>
         </Tabs>
       </div>
-
-      <Dialog open={!!requestToPrice} onOpenChange={(open) => !open && setRequestToPrice(null)}>
-        <DialogContent>
-            <DialogHeader>
-                <DialogTitle>{t.makeOfferTitle}</DialogTitle>
-                <DialogDescription>{t.makeOfferDesc}</DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="price" className="text-right">
-                        {t.priceLabel} (₹)
-                    </Label>
-                    <Input
-                        id="price"
-                        type="number"
-                        value={offerPrice}
-                        onChange={(e) => setOfferPrice(e.target.value)}
-                        className="col-span-3"
-                        placeholder="e.g., 500"
-                    />
-                </div>
-            </div>
-            <DialogFooter>
-                <Button variant="outline" onClick={() => setRequestToPrice(null)}>{t.cancelButton}</Button>
-                <Button onClick={handleMakeOffer} disabled={isSubmittingOffer}>
-                    {isSubmittingOffer && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    {t.sendOfferButton}
-                </Button>
-            </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }
