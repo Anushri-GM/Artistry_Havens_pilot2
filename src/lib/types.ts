@@ -114,3 +114,4 @@ export type Notification = {
   createdAt: any; // For serverTimestamp
   requestId?: string;
 };
+

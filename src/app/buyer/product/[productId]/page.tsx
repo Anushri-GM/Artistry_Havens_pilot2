@@ -103,7 +103,18 @@ export default function BuyerProductDetailPage() {
         paymentId: `pi_${new Date().getTime()}`, // Mock data
       };
 
-      await addDoc(ordersRef, newOrder);
+      const orderDocRef = await addDoc(ordersRef, newOrder);
+      
+      // Create notification for the artisan
+      const notificationsRef = collection(firestore, 'users', product.artisan.id, 'notifications');
+      await addDoc(notificationsRef, {
+        title: "New Order!",
+        message: `You have a new order for your product: "${product.name}".`,
+        type: 'new_order' as const,
+        link: `/artisan/orders`,
+        createdAt: serverTimestamp(),
+        requestId: orderDocRef.id
+      });
       
       toast({
         title: t.toastTitle,

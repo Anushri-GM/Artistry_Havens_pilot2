@@ -23,7 +23,7 @@ import { useTranslation } from '@/context/translation-context';
 import { useLanguage } from '@/context/language-context';
 import { cn } from '@/lib/utils';
 import { useUser, useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
 
 const formSchema = z.object({
   description: z.string().min(10, 'Please describe your idea in at least 10 characters.'),
@@ -164,6 +164,18 @@ export default function CustomizeWithReferencePage() {
     });
   };
 
+  const getCategoryDisplayValue = (value: string) => {
+    const category = baseCategoriesData.find(c => c.id === value);
+    if (category) {
+        const index = baseCategoriesData.indexOf(category);
+        if (translations.product_categories.length > index) {
+            return translations.product_categories[index];
+        }
+        return category.name;
+    }
+    return translations.customize_page.selectCategoryPlaceholder;
+  };
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!generatedImage || !referenceImage) {
         toast({
@@ -202,11 +214,35 @@ export default function CustomizeWithReferencePage() {
       };
 
       addDoc(requestsRef, newRequest)
-        .then(() => {
+        .then(async(docRef) => {
           toast({
               title: translations.customize_page.requestSentToast,
               description: translations.customize_page.requestSentDesc,
           });
+
+          // Notify artisans in the category
+          const artisansQuery = query(
+            collection(firestore, 'users'),
+            where('userType', '==', 'artisan'),
+            where('categories', 'array-contains', values.category)
+          );
+          const artisansSnapshot = await getDocs(artisansQuery);
+
+          const notificationPromises = artisansSnapshot.docs.map(artisanDoc => {
+            const notificationsRef = collection(firestore, 'users', artisanDoc.id, 'notifications');
+            const newNotification = {
+              title: 'New Customization Request',
+              message: `A new request in '${getCategoryDisplayValue(values.category)}' is available.`,
+              type: 'customization_request' as const,
+              link: '/artisan/orders',
+              createdAt: serverTimestamp(),
+              requestId: docRef.id
+            };
+            return addDoc(notificationsRef, newNotification);
+          });
+
+          await Promise.all(notificationPromises);
+
           form.reset();
           setReferenceImage(null);
           setGeneratedImage(null);
@@ -239,18 +275,6 @@ export default function CustomizeWithReferencePage() {
       setIsSubmitting(false);
     }
   }
-
-  const getCategoryDisplayValue = (value: string) => {
-    const category = baseCategoriesData.find(c => c.id === value);
-    if (category) {
-        const index = baseCategoriesData.indexOf(category);
-        if (translations.product_categories.length > index) {
-            return translations.product_categories[index];
-        }
-        return category.name;
-    }
-    return translations.customize_page.selectCategoryPlaceholder;
-  };
 
   return (
     <div className="container mx-auto p-4 max-w-2xl">
