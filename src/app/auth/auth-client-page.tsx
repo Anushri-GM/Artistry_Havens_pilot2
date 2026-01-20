@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -10,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useState, useEffect, Suspense, useRef } from 'react';
+import { useState, useEffect, Suspense, useRef, useCallback } from 'react';
 import { Loader2 } from 'lucide-react';
 import { Logo } from '@/components/icons';
 import Link from 'next/link';
@@ -38,6 +39,7 @@ function AuthClientPageComponent() {
   const [otpSent, setOtpSent] = useState(false);
   const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
   const recaptchaContainerRef = useRef<HTMLDivElement>(null);
+  const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
   const auth = useAuth();
   const firestore = useFirestore();
   
@@ -52,7 +54,16 @@ function AuthClientPageComponent() {
     setUserType(type);
   }, [searchParams]);
 
-  async function handleSendOtp() {
+  useEffect(() => {
+    if (auth && recaptchaContainerRef.current && !recaptchaVerifierRef.current) {
+      recaptchaVerifierRef.current = new RecaptchaVerifier(auth, recaptchaContainerRef.current, {
+        'size': 'invisible'
+      });
+    }
+  }, [auth]);
+
+
+  const handleSendOtp = useCallback(async () => {
     const { mobileNumber } = form.getValues();
     const mobileResult = z.string().regex(/^\d{10}$/).safeParse(mobileNumber);
 
@@ -62,22 +73,17 @@ function AuthClientPageComponent() {
     }
 
     setIsLoading(true);
-    auth.languageCode = language;
+    if(auth) {
+      auth.languageCode = language;
+    }
     const phoneNumber = `+91${mobileNumber}`;
 
     try {
-        if (!recaptchaContainerRef.current) {
-            throw new Error("reCAPTCHA container not found.");
+        if (!recaptchaVerifierRef.current) {
+            throw new Error("reCAPTCHA verifier not initialized.");
         }
 
-        // Ensure the container is empty before creating a new verifier
-        recaptchaContainerRef.current.innerHTML = '';
-        
-        const verifier = new RecaptchaVerifier(auth, recaptchaContainerRef.current, {
-            'size': 'invisible'
-        });
-
-        const result = await signInWithPhoneNumber(auth, phoneNumber, verifier);
+        const result = await signInWithPhoneNumber(auth, phoneNumber, recaptchaVerifierRef.current);
         setConfirmationResult(result);
         setOtpSent(true);
         toast({
@@ -90,7 +96,7 @@ function AuthClientPageComponent() {
     } finally {
         setIsLoading(false);
     }
-  }
+  }, [auth, form, language, toast]);
 
   const saveUserData = async (user: User) => {
     if (!firestore) return;
