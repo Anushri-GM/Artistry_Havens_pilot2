@@ -28,7 +28,7 @@ body {
     --input: 0 0% 89%;
     --ring: 0 84% 60%;
     --chart-1: 0 84% 60%;
-    --chart-2: 0 0% 40%;
+    --chart-2: 25 95% 53%;
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
@@ -63,7 +63,10 @@ body {
     --input: 0 0% 25%;
     --ring: 0 84% 60%;
     --chart-1: 0 84% 60%;
-    --chart-2: 39 77% 80%;
+    --chart-2: 25 95% 53%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
     --sidebar-background: 0 0% 14%;
     --sidebar-foreground: 39 77% 95%;
     --sidebar-primary: 0 84% 60%;

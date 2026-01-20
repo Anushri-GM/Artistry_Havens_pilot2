@@ -5,13 +5,13 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { products as allProducts } from '@/lib/data';
+import { products as allProducts, productCategories } from '@/lib/data';
 import ProductCard from '@/components/product-card';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Lightbulb, Mic, Volume2 } from 'lucide-react';
+import { Loader2, Lightbulb, Mic, Volume2, BarChart } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Product, SavedCollection } from '@/lib/types';
 import { useTranslation } from '@/context/translation-context';
@@ -22,6 +22,8 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import Autoplay from 'embla-carousel-autoplay';
 import TutorialDialog from '@/components/tutorial-dialog';
 import { getCommunityTrendInsights } from '@/ai/flows/community-trend-insights';
+import Link from 'next/link';
+
 
 const formSchema = z.object({
   productDescription: z.string().min(10, 'Description must be at least 10 characters long.'),
@@ -177,6 +179,7 @@ export default function ArtisanHomePage() {
         });
     }
   }, [toast, t.savedToCollectionToast]);
+  
 
   return (
     <div className="flex flex-col px-2 py-4 space-y-6 relative">
@@ -187,6 +190,14 @@ export default function ArtisanHomePage() {
       </div>
 
       <div className="space-y-8">
+        
+        <Link href="/artisan/visual-trend" passHref>
+          <Button className="w-full h-12 bg-yellow-300 text-yellow-900 hover:bg-yellow-400">
+            <BarChart className="mr-2 h-5 w-5" />
+            {t.visualTrendButton}
+          </Button>
+        </Link>
+        
         {/* Frequently Bought Products */}
         <div className="overflow-hidden">
             <section className="space-y-3">
@@ -232,8 +243,8 @@ export default function ArtisanHomePage() {
         </div>
 
         {/* AI Review Section */}
-        <section>
-             <Card className="max-w-sm">
+        <section className="grid grid-cols-1 gap-4">
+             <Card className="w-full">
               <CardHeader className="pb-4">
                 <CardTitle className="text-md leading-tight">{t.aiReviewTitle}</CardTitle>
                 <CardDescription className="text-xs">{t.aiReviewDescription}</CardDescription>
@@ -277,7 +288,7 @@ export default function ArtisanHomePage() {
             </Card>
             
             {result && (
-              <Card className="mt-4 max-w-sm">
+              <Card className="mt-4 max-w-sm md:col-span-2">
                 <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
                         <CardTitle className="text-md">{t.aiGeneratedInsightsTitle}</CardTitle>
@@ -305,3 +316,7 @@ export default function ArtisanHomePage() {
     </div>
   );
 }
+
+    
+
+    

@@ -1,15 +1,16 @@
 
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, MoreVertical, Edit, Trash2, Loader2 } from 'lucide-react';
+import { PlusCircle, MoreVertical, Edit, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import type { Product } from '@/lib/types';
 import { formatDistanceToNow } from 'date-fns';
 import { useTranslation } from '@/context/translation-context';
+import { useLanguage } from '@/context/language-context';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,19 +27,30 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogTrigger,
+  DialogClose
+} from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import TutorialDialog from '@/components/tutorial-dialog';
-import { useUser, useFirestore, useCollection } from '@/firebase';
-import { collection, query, where, doc, deleteDoc, Timestamp } from 'firebase/firestore';
 
 export default function MyProductsPage() {
   const { translations } = useTranslation();
   const t = translations.my_products_page;
   const { toast } = useToast();
-  const { user, isUserLoading } = useUser();
-  const firestore = useFirestore();
 
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+  const [isGenerating, setIsGenerating] = useState<string | null>(null);
+  const [analysisResult, setAnalysisResult] = useState<SalesAnalysis | null>(null);
+  const [currentOpenDialog, setCurrentOpenDialog] = useState<string | null>(null);
+
+  const [isPlaying, setIsPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement>(null);
 
   const productsQuery = useMemo(() => {
     if (user && firestore) {
@@ -57,13 +69,10 @@ export default function MyProductsPage() {
 
   const formatTimeAgo = (date: any) => {
     try {
-      // Handle both Firebase Timestamp and string dates
-      const jsDate = date instanceof Timestamp ? date.toDate() : new Date(date);
-      const distance = formatDistanceToNow(jsDate);
+      const distance = formatDistanceToNow(new Date(date));
       if (translations.add_product_page.cameraError.includes('Error')) { // A simple check for English
           return `Added ${distance} ago`;
       }
-      // A simple placeholder for other languages.
       return `${t.added} ${distance} ${t.ago}`;
     } catch (e) {
       return t.justAdded;
@@ -94,8 +103,6 @@ export default function MyProductsPage() {
     setProductToDelete(null); // Close the dialog
   };
 
-  const isLoading = isUserLoading || areProductsLoading;
-
   return (
     <>
       <div className="container mx-auto p-4 relative">
@@ -114,7 +121,7 @@ export default function MyProductsPage() {
         ) : myProducts && myProducts.length > 0 ? (
           <div className="grid grid-cols-2 gap-4">
             {myProducts.map(product => (
-              <Card key={product.id} className="overflow-hidden">
+              <Card key={product.id} className="overflow-hidden flex flex-col">
                 <CardContent className="p-0">
                   <div className="relative aspect-[3/4] w-full">
                     <Image
@@ -125,7 +132,7 @@ export default function MyProductsPage() {
                     />
                   </div>
                 </CardContent>
-                <CardHeader className="p-2 sm:p-3">
+                <CardHeader className="p-2 sm:p-3 flex-grow">
                   <CardTitle className="font-headline text-sm sm:text-base truncate">{product.name}</CardTitle>
                   <CardDescription className="text-xs">
                     {product.createdAt ? 
@@ -137,23 +144,75 @@ export default function MyProductsPage() {
                 <CardContent className="p-2 sm:p-3 pt-0">
                   <div className="flex items-center justify-between">
                     <p className="text-sm sm:text-md font-semibold">₹{product.price.toFixed(2)}</p>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
-                          <Edit className="mr-2 h-4 w-4" />
-                          <span>{t.editButton}</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setProductToDelete(product)} className="text-destructive">
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          <span>{t.deleteButton}</span>
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <Dialog onOpenChange={(open) => onDialogOpenChange(open, product)}>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem>
+                            <Edit className="mr-2 h-4 w-4" />
+                            <span>{t.editButton}</span>
+                          </DropdownMenuItem>
+                          <DialogTrigger asChild>
+                            <DropdownMenuItem>
+                                <Sparkles className="mr-2 h-4 w-4" />
+                                <span>{t.analyzeButton}</span>
+                            </DropdownMenuItem>
+                          </DialogTrigger>
+                          <DropdownMenuItem onClick={() => setProductToDelete(product)} className="text-destructive">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            <span>{t.deleteButton}</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                      <DialogContent>
+                          <DialogHeader>
+                              <DialogTitle>{analysisResult ? `${t.analysisFor} ${product.name}`: t.generatingAnalysisTitle}</DialogTitle>
+                          </DialogHeader>
+                          {analysisResult ? (
+                            <div className="py-4 space-y-4">
+                              <div className="flex items-center justify-between">
+                                  <div className={cn("text-xs font-semibold px-2.5 py-0.5 rounded-full border", getPerformanceBadgeColor(analysisResult.predictedPerformance))}>
+                                     {t.predictedPerformance}: {analysisResult.predictedPerformance}
+                                  </div>
+                                  {analysisResult.analysisAudio && (
+                                      <Button
+                                          size="icon"
+                                          variant="ghost"
+                                          className={cn("h-8 w-8 rounded-full", isPlaying && "bg-accent text-accent-foreground")}
+                                          onClick={handlePlayPause}
+                                          aria-label="Play audio analysis"
+                                      >
+                                          <Volume2 className="h-5 w-5" />
+                                          <audio ref={audioRef} src={analysisResult.analysisAudio} onPlay={() => setIsPlaying(true)} onPause={() => setIsPlaying(false)} onEnded={handleAudioEnded} />
+                                      </Button>
+                                  )}
+                              </div>
+                              <div>
+                                <h3 className="font-semibold mb-1">{t.analysisTitle}</h3>
+                                <p className="text-sm text-muted-foreground whitespace-pre-wrap">{analysisResult.analysis}</p>
+                              </div>
+                              <div>
+                                <h3 className="font-semibold mb-1">{t.suggestionsTitle}</h3>
+                                <p className="text-sm text-muted-foreground whitespace-pre-wrap">{analysisResult.suggestions}</p>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="py-4 flex justify-center items-center h-48">
+                              <div className="text-center space-y-2">
+                                <Loader2 className="h-6 w-6 animate-spin mx-auto"/>
+                                <p className="text-sm text-muted-foreground">{t.generatingAnalysisDesc}</p>
+                              </div>
+                            </div>
+                          )}
+                          <DialogClose asChild>
+                              <Button type="button" variant="secondary" className="w-full">{t.closeButton}</Button>
+                          </DialogClose>
+                      </DialogContent>
+                    </Dialog>
                   </div>
                 </CardContent>
               </Card>
@@ -184,7 +243,7 @@ export default function MyProductsPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setProductToDelete(null)}>{t.cancelButton}</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteProduct}>{t.deleteButton}</AlertDialogAction>
+            <AlertDialogAction onClick={handleDeleteProduct} className="bg-destructive hover:bg-destructive/90">{t.deleteButton}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
