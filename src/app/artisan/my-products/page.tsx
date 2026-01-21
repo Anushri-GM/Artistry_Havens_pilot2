@@ -1,16 +1,14 @@
-
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, MoreVertical, Edit, Trash2 } from 'lucide-react';
+import { PlusCircle, MoreVertical, Edit, Trash2, Loader2, Sparkles, Volume2 } from 'lucide-react';
 import Link from 'next/link';
 import type { Product } from '@/lib/types';
 import { formatDistanceToNow } from 'date-fns';
 import { useTranslation } from '@/context/translation-context';
-import { useLanguage } from '@/context/language-context';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,17 +30,22 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
   DialogTrigger,
   DialogClose
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import TutorialDialog from '@/components/tutorial-dialog';
+import { useUser, useFirestore, useCollection } from '@/firebase';
+import { collection, query, where, doc, deleteDoc } from 'firebase/firestore';
+import { analyzeSalesPotential, type AnalyzeSalesPotentialOutput as SalesAnalysis } from '@/ai/flows/analyze-sales-potential';
+import { cn } from '@/lib/utils';
 
 export default function MyProductsPage() {
   const { translations } = useTranslation();
   const t = translations.my_products_page;
   const { toast } = useToast();
+  const { user } = useUser();
+  const firestore = useFirestore();
 
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [isGenerating, setIsGenerating] = useState<string | null>(null);
@@ -55,9 +58,7 @@ export default function MyProductsPage() {
   const productsQuery = useMemo(() => {
     if (user && firestore) {
       const productsRef = collection(firestore, 'products');
-      // Create a document reference to the user's document
       const artisanRef = doc(firestore, `users/${user.uid}`);
-      // Query for products where the 'artisan' field matches the reference
       const q = query(productsRef, where('artisan', '==', artisanRef));
       (q as any).__memo = true;
       return q;
@@ -67,9 +68,12 @@ export default function MyProductsPage() {
 
   const { data: myProducts, isLoading: areProductsLoading } = useCollection<Product>(productsQuery);
 
+  const isLoading = areProductsLoading;
+
   const formatTimeAgo = (date: any) => {
     try {
-      const distance = formatDistanceToNow(new Date(date));
+      const dateObj = date.toDate ? date.toDate() : new Date(date);
+      const distance = formatDistanceToNow(dateObj);
       if (translations.add_product_page.cameraError.includes('Error')) { // A simple check for English
           return `Added ${distance} ago`;
       }
@@ -100,7 +104,77 @@ export default function MyProductsPage() {
         });
     }
 
-    setProductToDelete(null); // Close the dialog
+    setProductToDelete(null);
+  };
+  
+  const handleGenerateReview = async (product: Product) => {
+    setIsGenerating(product.id);
+    setAnalysisResult(null);
+    try {
+      const result = await analyzeSalesPotential({ 
+        productName: product.name,
+        productDescription: product.description,
+        productCategory: product.category,
+        productPrice: product.price,
+      });
+      setAnalysisResult(result);
+      toast({
+        title: `${t.analysisFor} ${product.name}`,
+        description: t.analysisComplete,
+      })
+    } catch (error) {
+      console.error(t.analysisFailed, error);
+      toast({
+        variant: 'destructive',
+        title: t.analysisFailed,
+        description: t.analysisFailedDesc,
+      });
+    } finally {
+      setIsGenerating(null);
+    }
+  }
+  
+  const onDialogOpenChange = (open: boolean, product: Product) => {
+    if (open) {
+      setCurrentOpenDialog(product.id);
+      handleGenerateReview(product);
+    } else {
+      setCurrentOpenDialog(null);
+      setAnalysisResult(null);
+       if (audioRef.current && analysisResult) {
+        audioRef.current.pause();
+        setIsPlaying(false);
+      }
+    }
+  };
+
+  const handlePlayPause = () => {
+    if (audioRef.current) {
+        if (isPlaying) {
+            audioRef.current.pause();
+        } else {
+            audioRef.current.currentTime = 0;
+            audioRef.current.play();
+        }
+        setIsPlaying(!isPlaying);
+    }
+  };
+  
+  const handleAudioEnded = () => {
+    setIsPlaying(false);
+  };
+  
+  const getPerformanceBadgeColor = (performance: 'Low' | 'Medium' | 'High') => {
+    switch (performance) {
+      case 'Low':
+        return 'bg-red-100 text-red-800 border-red-200';
+      case 'Medium':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'High':
+        return 'bg-green-100 text-green-800 border-green-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
   };
 
   return (
@@ -172,7 +246,14 @@ export default function MyProductsPage() {
                           <DialogHeader>
                               <DialogTitle>{analysisResult ? `${t.analysisFor} ${product.name}`: t.generatingAnalysisTitle}</DialogTitle>
                           </DialogHeader>
-                          {analysisResult ? (
+                          {isGenerating === product.id || !analysisResult ? (
+                             <div className="py-4 flex justify-center items-center h-48">
+                              <div className="text-center space-y-2">
+                                <Loader2 className="h-6 w-6 animate-spin mx-auto"/>
+                                <p className="text-sm text-muted-foreground">{t.generatingAnalysisDesc}</p>
+                              </div>
+                            </div>
+                          ) : (
                             <div className="py-4 space-y-4">
                               <div className="flex items-center justify-between">
                                   <div className={cn("text-xs font-semibold px-2.5 py-0.5 rounded-full border", getPerformanceBadgeColor(analysisResult.predictedPerformance))}>
@@ -198,13 +279,6 @@ export default function MyProductsPage() {
                               <div>
                                 <h3 className="font-semibold mb-1">{t.suggestionsTitle}</h3>
                                 <p className="text-sm text-muted-foreground whitespace-pre-wrap">{analysisResult.suggestions}</p>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="py-4 flex justify-center items-center h-48">
-                              <div className="text-center space-y-2">
-                                <Loader2 className="h-6 w-6 animate-spin mx-auto"/>
-                                <p className="text-sm text-muted-foreground">{t.generatingAnalysisDesc}</p>
                               </div>
                             </div>
                           )}
