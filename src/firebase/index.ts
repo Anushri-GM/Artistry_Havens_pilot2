@@ -23,10 +23,6 @@ export function initializeFirebase() {
     if (!(firestore.toJSON() as any).emulator) {
        connectFirestoreEmulator(firestore, process.env.NEXT_PUBLIC_EMULATOR_HOST, 8080);
     }
-  } else if (process.env.NODE_ENV === 'development') {
-    // This allows reCAPTCHA to work on localhost for phone auth
-    // @ts-ignore - This is a private property but necessary for dev
-    auth.settings.appVerificationDisabledForTesting = true;
   }
 
   return {
