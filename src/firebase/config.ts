@@ -1,8 +1,10 @@
+// This file is now responsible for reading environment variables
+// and constructing the Firebase config object.
+
 export const firebaseConfig = {
-  "projectId": "artistry-havens-1-654483-678d5",
-  "appId": "1:247779559179:web:a2226a0834fc35d7a0440e",
-  "apiKey": "AIzaSyD3vVi3eHdSon4Lzg6zQcd-YbbwBI4QAGU",
-  "authDomain": "artistry-havens-1-654483-678d5.firebaseapp.com",
-  "measurementId": "",
-  "messagingSenderId": "247779559179"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  messagingSenderId: process.env.NEXT_PUBLIC_MESSAGING_SENDER_ID
 };

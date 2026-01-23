@@ -4,7 +4,6 @@
 /node_modules
 /.pnp
 .pnp.js
-.yarn/install-state.gz
 
 # testing
 /coverage
@@ -24,11 +23,9 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-pnpm-debug.log*
 
 # local env files
 .env.local
-.env
 .env.development.local
 .env.test.local
 .env.production.local
@@ -39,19 +36,3 @@ pnpm-debug.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-
-# Firebase
-.firebase/
-!/.firebase/emulators/
-.firebase/emulators/auth/
-.firebase/emulators/database/
-.firebase/emulators/firestore/
-.firebase/emulators/pubsub/
-.firebase/emulators/storage/
-.firebase/emulators/*.log
-.firebase/hosting.*.cache
-firebase-debug.log
-firestore-debug.log
-database-debug.log
-pubsub-debug.log
-ui-debug.log
